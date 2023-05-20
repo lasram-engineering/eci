@@ -1,0 +1,36 @@
+version: "3.9"
+services:
+  mongo:
+    image: mongo:4.4
+    hostname: mongo
+    command: --nojournal
+
+  orion:
+    image: fiware/orion
+    hostname: orion
+    links:
+      - mongo
+    ports:
+      - "${ORION_PORT}:${ORION_PORT}"
+    command: -dbhost mongo
+
+  iot-agent:
+    image: fiware/iotagent-ul:latest
+    hostname: iot-agent
+    depends_on: 
+      - mongo
+    ports:
+      - "${IOTA_NORTH_PORT}:${IOTA_NORTH_PORT}" # north port
+      - "${IOTA_SOUTH_PORT}:${IOTA_SOUTH_PORT}" # south port
+    environment:
+      - "IOTA_CB_HOST=orion"
+      - "IOTA_CB_PORT=${ORION_PORT}"
+      - "IOTA_NORTH_PORT=${IOTA_NORTH_PORT}"
+      - "IOTA_REGISTRY_TYPE=mongodb"
+      - "IOTA_LOG_LEVEL=DEBUG"
+      - "IOTA_TIMESTAMP=true"
+      - "IOTA_MONGO_HOST=mongo"
+      - "IOTA_MONGO_PORT=27017"
+      - "IOTA_MONGO_DB=iotagentul"
+      - "IOTA_HTTP_PORT=${IOTA_SOUTH_PORT}"
+      - "IOTA_PROVIDER_URL=http://iot-agent:${IOTA_NORTH_PORT}"

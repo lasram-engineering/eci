@@ -1,0 +1,47 @@
+menu "FIWARE IoT Agent Configuration"
+config IOT_AGENT_HOST
+    string "IoT Agent Host"
+    default "192.168.1.100"
+    help 
+        The host (IP) of the FIWARE IoT Agent
+
+config IOT_AGENT_PORT
+    string "IoT Agent Port"
+    default "4041"
+    help 
+        The south port of the FIWARE IoT Agent
+
+config IOT_AGENT_RESOURCE
+    string "IoT Agent Resource identifier"
+    default "/iot/ul"
+    help 
+        The resource identifier of the FIWARE IoT Agent
+
+config IOT_AGENT_APIKEY
+    string "IoT Agent API key"
+    default "openiot"
+    help 
+        The API key of the IoT Agent
+
+config IOT_AGENT_DEVICE_ID
+    string "IoT Agent Device ID"
+    default "edi001"
+    help 
+        The ID of this device in the IoT Agent
+endmenu
+menu "WiFi Connection"
+    config WIFI_SSID
+        string "WiFi SSID"
+        help
+            The SSID of the WiFi network to connect to
+
+    config WIFI_PASS
+        string "WiFi Password"
+        help
+            The password of the WiFi network
+
+    config WIFI_RETRY_ERROR_THRESHOLD
+        string "WiFi connection retry error threshold"
+        help
+            The number of connection retries before an error is thrown
+endmenu
