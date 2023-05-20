@@ -1,27 +1,27 @@
 #pragma once
 
-#include "freertos/FreeRTOS.h"
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/event_groups.h>
 
-#define APP_STATE_NO_ERROR 0x0
-#define APP_STATE_NO_ERROR_MSG "No error"
-#define APP_STATE_ERROR_MSG_LEN 20
+#define APP_STATE_UPDATE BIT0
 
-#define APP_STATE_INTERNAL_ERROR BIT0
-#define APP_STATE_WIFI_CONNECT_ERROR BIT1
+#define STATE_TYPE_ERROR 0
+#define STATE_TYPE_INPUT 1
+#define STATE_TYPE_INTERNAL 2
 
-typedef int32_t app_state_error_flag_t;
+// errors
+#define APP_STATE_ERROR_CRITICAL BIT1
+#define APP_STATE_ERROR_WIFI_CONNECTION BIT2
 
-typedef struct
-{
-    unsigned short error;
-    char error_msg[APP_STATE_ERROR_MSG_LEN];
-    bool wifi_connected;
-} app_state_t;
+// inputs
 
-typedef void (*app_state_handler_t)(app_state_t *, void *);
+// internal
+#define APP_STATE_INTERNAL_WIFI_CONNECTED BIT1
 
 esp_err_t app_state_init();
 
-void app_state_modify(app_state_handler_t handler, void *handler_extra_args);
-
-app_state_t app_state_get();
+void app_state_set(int type, EventBits_t bits);
+void app_state_unset(int type, EventBits_t bits);
+EventBits_t app_state_get(int type);
+void app_state_wait_for_event(int type, EventBits_t event_bits);

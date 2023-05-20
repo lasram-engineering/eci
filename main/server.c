@@ -10,11 +10,7 @@ static const char *TAG = "Server";
 
 esp_err_t get_handler(httpd_req_t *request)
 {
-    char response[7 + APP_STATE_ERROR_MSG_LEN];
-
-    app_state_t state = app_state_get();
-
-    sprintf(response, "State: %s", state.error_msg);
+    char response[] = "OK";
 
     httpd_resp_send(request, response, HTTPD_RESP_USE_STRLEN);
 
