@@ -41,7 +41,8 @@ menu "WiFi Connection"
             The password of the WiFi network
 
     config WIFI_RETRY_ERROR_THRESHOLD
-        string "WiFi connection retry error threshold"
+        int "WiFi connection retry error threshold"
+        default 5
         help
             The number of connection retries before an error is thrown
 endmenu
