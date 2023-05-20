@@ -8,8 +8,12 @@
 #include "server.h"
 #include "wifi.h"
 #include "app_state.h"
+#include "app_tasks.h"
 
 static httpd_handle_t server = NULL;
+
+// task handles
+static TaskHandle_t error_task_handle = NULL;
 
 void app_main(void)
 {
@@ -18,6 +22,9 @@ void app_main(void)
 
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
+
+    // start tasks
+    xTaskCreate(error_task, "Error task", 4096, NULL, 10, &error_task_handle);
 
     /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
      * Read "Establishing Wi-Fi or Ethernet Connection" section in

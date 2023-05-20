@@ -5,6 +5,8 @@
 #include <freertos/semphr.h>
 #include <esp_log.h>
 
+#define BITS_ALL 0xFFFFFFFF
+
 static const char *TAG = "STATE";
 static EventGroupHandle_t app_state_error;
 static EventGroupHandle_t app_state_input;
@@ -62,6 +64,28 @@ void app_state_unset(int type, EventBits_t bits)
 
     case STATE_TYPE_INTERNAL:
         xEventGroupClearBits(app_state_internal, bits_to_set);
+        break;
+
+    default:
+        ESP_LOGW(TAG, "Invalid input type for 'app_state_set': %d", type);
+        break;
+    }
+}
+
+void app_state_reset(int type)
+{
+    switch (type)
+    {
+    case STATE_TYPE_ERROR:
+        xEventGroupClearBits(app_state_error, BITS_ALL);
+        break;
+
+    case STATE_TYPE_INPUT:
+        xEventGroupClearBits(app_state_input, BITS_ALL);
+        break;
+
+    case STATE_TYPE_INTERNAL:
+        xEventGroupClearBits(app_state_internal, BITS_ALL);
         break;
 
     default:

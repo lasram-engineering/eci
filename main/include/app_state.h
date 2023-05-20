@@ -23,5 +23,6 @@ esp_err_t app_state_init();
 
 void app_state_set(int type, EventBits_t bits);
 void app_state_unset(int type, EventBits_t bits);
+void app_state_reset(int type);
 EventBits_t app_state_get(int type);
 void app_state_wait_for_event(int type, EventBits_t event_bits);
