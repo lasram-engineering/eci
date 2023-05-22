@@ -46,3 +46,14 @@ menu "WiFi Connection"
         help
             The number of connection retries before an error is thrown
 endmenu
+menu "GPIO"
+    choice  INPUT_PULL_MODE
+        prompt "Select input pin pull mode"
+
+        config INPUT_PULL_MODE_PULLUP
+            bool "Pullup"
+
+        config INPUT_PULL_MODE_PULLDOWN
+            bool "Pulldown"
+    endchoice
+endmenu
