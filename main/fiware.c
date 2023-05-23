@@ -3,9 +3,10 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "esp_log.h"
-#include "esp_err.h"
-#include "esp_http_client.h"
+#include <esp_log.h>
+#include <esp_err.h>
+#include <esp_http_client.h>
+#include <driver/uart.h>
 
 #define IOT_AGENT_URL "http://" CONFIG_IOT_AGENT_HOST ":" CONFIG_IOT_AGENT_PORT CONFIG_IOT_AGENT_RESOURCE
 #define IOT_AGENT_QUERY "?k=" CONFIG_IOT_AGENT_APIKEY "&i=" CONFIG_IOT_AGENT_DEVICE_ID
@@ -68,11 +69,11 @@ esp_err_t _http_event_handle(esp_http_client_event_t *evt)
         ESP_LOGI(TAG, "HTTP_EVENT_HEADER_SENT");
         break;
     case HTTP_EVENT_ON_HEADER:
-        ESP_LOGI(TAG, "HTTP_EVENT_ON_HEADER");
-        printf("%.*s", evt->data_len, (char *)evt->data);
+        ESP_LOGI(TAG, "HTTP_EVENT_ON_HEADER %s -> %s", evt->header_key, evt->header_value);
         break;
     case HTTP_EVENT_ON_DATA:
-        ESP_LOGI(TAG, "HTTP_EVENT_ON_DATA: %s", (char *)evt->data);
+        ESP_LOGI(TAG, "HTTP_EVENT_ON_DATA");
+        printf("%.*s", evt->data_len, (char *)evt->data);
         break;
     case HTTP_EVENT_ON_FINISH:
         ESP_LOGI(TAG, "HTTP_EVENT_ON_FINISH");

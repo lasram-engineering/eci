@@ -3,13 +3,15 @@
 #include <esp_log.h>
 #include <esp_http_server.h>
 
-#include <fiware.h>
+#include "fiware.h"
+#include "app_state.h"
 
 static const char *TAG = "Server";
 
 esp_err_t get_handler(httpd_req_t *request)
 {
-    const char response[] = "GET Response: Running";
+    char response[] = "OK";
+
     httpd_resp_send(request, response, HTTPD_RESP_USE_STRLEN);
 
     update_attribute('c', "1");
@@ -24,8 +26,7 @@ httpd_uri_t uri_get = {
     .user_ctx = NULL,
 };
 
-httpd_handle_t
-start_http_server()
+httpd_handle_t start_http_server()
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
 

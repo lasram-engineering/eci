@@ -30,6 +30,12 @@ config IOT_AGENT_DEVICE_ID
         The ID of this device in the IoT Agent
 endmenu
 menu "WiFi Connection"
+    config WIFI_HOST
+        string "WiFi Hostname"
+        default "EmbeddedDeviceInterface"
+        help 
+            The WiFi hostname of the device
+            
     config WIFI_SSID
         string "WiFi SSID"
         help
@@ -41,7 +47,19 @@ menu "WiFi Connection"
             The password of the WiFi network
 
     config WIFI_RETRY_ERROR_THRESHOLD
-        string "WiFi connection retry error threshold"
+        int "WiFi connection retry error threshold"
+        default 5
         help
             The number of connection retries before an error is thrown
+endmenu
+menu "GPIO"
+    choice  INPUT_PULL_MODE
+        prompt "Select input pin pull mode"
+
+        config INPUT_PULL_MODE_PULLUP
+            bool "Pullup"
+
+        config INPUT_PULL_MODE_PULLDOWN
+            bool "Pulldown"
+    endchoice
 endmenu
