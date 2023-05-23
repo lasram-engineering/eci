@@ -13,6 +13,10 @@
 #define EVENT_GROUP_BITS 8
 #endif
 
+#ifndef MIN
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#endif
+
 static const char *TAG = "STATE_TASKS";
 
 void error_task(void *args)
@@ -21,15 +25,15 @@ void error_task(void *args)
     while (1)
     {
         // wait for the error state to be updated
-        app_state_wait_for_event(STATE_TYPE_ERROR, APP_STATE_UPDATE);
+        app_state_wait_for_event(STATE_TYPE_ERROR, APP_STATE_ANY);
 
         EventBits_t error_bits = app_state_get(STATE_TYPE_ERROR);
 
         int i;
-        for (i = 0; i < EVENT_GROUP_BITS; i++)
+        for (i = 0; i < MIN(EVENT_GROUP_BITS, IO_OUTPUT_NUMBER); i++)
         {
             // check if the bit is set
-            if (error_bits && BIT(i))
+            if (error_bits & BIT(i))
             {
                 // write the error to the output
                 set_output_level(i, 1);
@@ -53,7 +57,7 @@ void input_task(void *args)
     while (1)
     {
         // wait for the input state to be updated
-        app_state_wait_for_event(STATE_TYPE_INPUT, APP_STATE_UPDATE);
+        app_state_wait_for_event(STATE_TYPE_INPUT, APP_STATE_ANY);
 
         EventBits_t input_bits = app_state_get(STATE_TYPE_INPUT);
 

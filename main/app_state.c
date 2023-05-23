@@ -28,7 +28,7 @@ esp_err_t app_state_init()
 
 void app_state_set(int type, EventBits_t bits)
 {
-    uint32_t bits_to_set = bits | APP_STATE_UPDATE;
+    uint32_t bits_to_set = bits;
     BaseType_t xHigherPriorityTaskWoken, xResult;
 
     /* xHigherPriorityTaskWoken must be initialised to pdFALSE. */
@@ -91,7 +91,7 @@ void app_state_set(int type, EventBits_t bits)
 
 void app_state_unset(int type, EventBits_t bits)
 {
-    uint32_t bits_to_set = bits | APP_STATE_UPDATE;
+    uint32_t bits_to_set = bits;
 
     if (xPortInIsrContext())
     {
