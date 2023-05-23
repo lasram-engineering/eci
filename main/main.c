@@ -29,11 +29,8 @@ void app_main(void)
     xTaskCreate(error_task, "Error task", 4096, NULL, 10, &error_task_handle);
     xTaskCreate(input_task, "Input task", 4096, NULL, 10, &input_task_handle);
 
-    /* This helper function configures Wi-Fi or Ethernet, as selected in menuconfig.
-     * Read "Establishing Wi-Fi or Ethernet Connection" section in
-     * examples/protocols/README.md for more information about this function.
-     */
-    // ESP_ERROR_CHECK(example_connect());
+    // connect to wifi network
+    // blocking call
     wifi_connect_to_station();
 
     // start http server

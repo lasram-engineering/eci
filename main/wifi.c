@@ -32,6 +32,10 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
 
         case WIFI_EVENT_STA_CONNECTED: // connected to wifi
             ESP_LOGI(TAG, "Connected to station");
+
+            // reset the error state
+            app_state_unset(STATE_TYPE_ERROR, APP_STATE_ERROR_WIFI_CONNECTION);
+
             // reset the retry count
             s_retry_count = 0;
             break;
