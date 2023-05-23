@@ -10,6 +10,7 @@
 #include "app_state.h"
 #include "app_tasks.h"
 #include "io.h"
+#include "fiware.h"
 
 static httpd_handle_t server = NULL;
 
@@ -35,4 +36,18 @@ void app_main(void)
 
     // start http server
     server = start_http_server();
+
+    // check the health of the server
+    esp_err_t server_online = fiware_check_health();
+
+    if (server_online != ESP_OK)
+        app_state_set(STATE_TYPE_ERROR, APP_STATE_ERROR_IOTA_OFFLINE);
+
+    while (server_online != ESP_OK)
+    {
+        server_online = fiware_check_health();
+        vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
+
+    app_state_unset(STATE_TYPE_ERROR, APP_STATE_ERROR_IOTA_OFFLINE);
 }

@@ -14,7 +14,7 @@ esp_err_t get_handler(httpd_req_t *request)
 
     httpd_resp_send(request, response, HTTPD_RESP_USE_STRLEN);
 
-    update_attribute('c', "1");
+    fiware_update_attribute('c', "1");
 
     return ESP_OK;
 }

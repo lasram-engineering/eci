@@ -8,10 +8,10 @@
 #include <esp_http_client.h>
 #include <driver/uart.h>
 
-#define IOT_AGENT_URL "http://" CONFIG_IOT_AGENT_HOST ":" CONFIG_IOT_AGENT_PORT CONFIG_IOT_AGENT_RESOURCE
-#define IOT_AGENT_QUERY "?k=" CONFIG_IOT_AGENT_APIKEY "&i=" CONFIG_IOT_AGENT_DEVICE_ID
+#include "app_state.h"
 
-#define IOT_AGENT_URI IOT_AGENT_URL IOT_AGENT_QUERY
+#define IOT_AGENT_HEALTHCHECK_URL "http://" CONFIG_IOT_AGENT_HOST ":" CONFIG_IOT_AGENT_NORTH_PORT "/iot/about"
+#define IOT_AGENT_URL "http://" CONFIG_IOT_AGENT_HOST ":" CONFIG_IOT_AGENT_SOUTH_PORT CONFIG_IOT_AGENT_RESOURCE "?k=" CONFIG_IOT_AGENT_APIKEY "&i=" CONFIG_IOT_AGENT_DEVICE_ID
 
 static char *TAG = "FIWARE IoT Agent";
 
@@ -52,62 +52,70 @@ esp_err_t extend_payload(char *base_string, const char name, const char *value)
     return ESP_OK;
 }
 
-esp_err_t _http_event_handle(esp_http_client_event_t *evt)
+esp_err_t _http_silent_event_handle(esp_http_client_event_t *event)
 {
-    switch (evt->event_id)
+    switch (event->event_id)
     {
-    case HTTP_EVENT_REDIRECT:
-        ESP_LOGI(TAG, "HTTP_EVENT_REDIRECT");
-        break;
     case HTTP_EVENT_ERROR:
-        ESP_LOGI(TAG, "HTTP_EVENT_ERROR");
-        break;
-    case HTTP_EVENT_ON_CONNECTED:
-        ESP_LOGI(TAG, "HTTP_EVENT_ON_CONNECTED");
-        break;
-    case HTTP_EVENT_HEADER_SENT:
-        ESP_LOGI(TAG, "HTTP_EVENT_HEADER_SENT");
-        break;
-    case HTTP_EVENT_ON_HEADER:
-        ESP_LOGI(TAG, "HTTP_EVENT_ON_HEADER %s -> %s", evt->header_key, evt->header_value);
-        break;
-    case HTTP_EVENT_ON_DATA:
-        ESP_LOGI(TAG, "HTTP_EVENT_ON_DATA");
-        printf("%.*s", evt->data_len, (char *)evt->data);
-        break;
-    case HTTP_EVENT_ON_FINISH:
-        ESP_LOGI(TAG, "HTTP_EVENT_ON_FINISH");
-        break;
-    case HTTP_EVENT_DISCONNECTED:
-        ESP_LOGI(TAG, "HTTP_EVENT_DISCONNECTED");
-        break;
+        return ESP_ERR_HTTP_CONNECT;
+
+    default:
+        return ESP_OK;
     }
-    return ESP_OK;
 }
 
-static esp_http_client_config_t config = {
+static esp_http_client_config_t update_attribute_config = {
     .url = IOT_AGENT_URL,
-    .method = HTTP_METHOD_GET,
-    .event_handler = _http_event_handle,
+    .method = HTTP_METHOD_POST,
+    .event_handler = _http_silent_event_handle,
 };
 
-esp_err_t update_attribute(const char name, const char *value)
+static esp_http_client_config_t get_health_config = {
+    .url = IOT_AGENT_HEALTHCHECK_URL,
+    .method = HTTP_METHOD_GET,
+    .event_handler = _http_silent_event_handle,
+};
+
+esp_err_t fiware_update_attribute(const char name, const char *value)
 {
     // initialize the client
-    esp_http_client_handle_t client = esp_http_client_init(&config);
-    ESP_LOGI(TAG, "Making request to %s...", config.url);
-
-    esp_err_t err = esp_http_client_perform(client);
-
+    esp_http_client_handle_t client = esp_http_client_init(&update_attribute_config);
     char *attribute = make_payload(name, value);
 
-    ESP_LOGI(TAG, "Attribute: %s", attribute);
+    // set the POST data field
+    esp_http_client_set_post_field(client, attribute, strlen(attribute));
+
+    // set the header
+    esp_http_client_set_header(client, "Content-Type", "text/plain");
+
+    // send the request
+    esp_err_t err = esp_http_client_perform(client);
+    ESP_LOGI(TAG, "Making POST request to %s", IOT_AGENT_URL);
 
     if (err == ESP_OK)
     {
-        ESP_LOGI(TAG, "Status = %d, content_length = %lld",
-                 esp_http_client_get_status_code(client),
-                 esp_http_client_get_content_length(client));
+        int status = esp_http_client_get_status_code(client);
+
+        if (status == 404)
+        {
+            app_state_set(STATE_TYPE_ERROR, APP_STATE_ERROR_IOTA_DEVICE_NOT_REGISTERED);
+            ESP_LOGW(
+                TAG,
+                "Error: IoT Device not registered (id: %s, apikey: %s)",
+                CONFIG_IOT_AGENT_DEVICE_ID,
+                CONFIG_IOT_AGENT_APIKEY);
+
+            return ESP_ERR_HTTP_BASE;
+        }
+        else if (status >= 300)
+        {
+            app_state_set(STATE_TYPE_ERROR, APP_STATE_ERROR_IOTA_ERROR);
+            ESP_LOGW(TAG, "Error while updating attribute: %d", status);
+
+            return ESP_ERR_HTTP_BASE;
+        }
+
+        ESP_LOGI(TAG, "Updated attribute of %s: %c -> %s", CONFIG_IOT_AGENT_DEVICE_ID, name, value);
     }
 
     // cleanup
@@ -115,4 +123,31 @@ esp_err_t update_attribute(const char name, const char *value)
     free(attribute);
 
     return ESP_OK;
+}
+
+esp_err_t fiware_check_health()
+{
+    esp_http_client_handle_t client = esp_http_client_init(&get_health_config);
+
+    esp_err_t err = esp_http_client_perform(client);
+
+    if (err == ESP_OK)
+    {
+        // get the status code
+        int status_code = esp_http_client_get_status_code(client);
+
+        if (status_code >= 300)
+        {
+            ESP_LOGI(TAG, "FIWARE IoT Agent: invalid response: %d", status_code);
+            return ESP_ERR_HTTP_CONNECT;
+        }
+
+        ESP_LOGI(TAG, "FIWARE IoT Agent: online");
+        return ESP_OK;
+    }
+    else
+    {
+        ESP_LOGI(TAG, "FIWARE IoT Agent: unreachable");
+        return ESP_ERR_HTTP_CONNECT;
+    }
 }
