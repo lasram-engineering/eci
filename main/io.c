@@ -42,6 +42,37 @@ int get_port_from_input(int input)
     return -1;
 }
 
+int get_output_from_port(int port)
+{
+    int output;
+    for (output = 0; output < IO_OUTPUT_NUMBER; output++)
+    {
+        if (map_output_to_port[output] == port)
+        {
+            return output;
+        }
+    }
+
+    return -1;
+}
+
+int get_port_from_output(int output)
+{
+    if (output < IO_OUTPUT_NUMBER && output >= 0)
+    {
+        return map_output_to_port[output];
+    }
+
+    return -1;
+}
+
+void set_output_level(int output, int level)
+{
+    int output_port = get_port_from_output(output);
+
+    gpio_set_level(output_port, level);
+}
+
 static void IRAM_ATTR gpio_interrupt_handler(void *args)
 {
     ESP_DRAM_LOGI(TAG, "GPIO interrupt");
@@ -62,7 +93,7 @@ static void IRAM_ATTR gpio_interrupt_handler(void *args)
 
 void init_io()
 {
-    int input, pin;
+    int input, output, pin;
 
     // initialize isr
     gpio_install_isr_service(0);
@@ -88,5 +119,15 @@ void init_io()
 
         // add the isr handler function
         gpio_isr_handler_add(pin, gpio_interrupt_handler, (void *)pin);
+    }
+
+    // set the outputs
+    for (output = 0; output < IO_OUTPUT_NUMBER; output++)
+    {
+        pin = get_port_from_output(output);
+
+        ESP_LOGI(TAG, "Initializing output %d at pin %d", output, pin);
+
+        gpio_set_direction(pin, GPIO_MODE_OUTPUT);
     }
 }

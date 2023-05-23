@@ -7,6 +7,12 @@
 #include "app_state.h"
 #include "io.h"
 
+#ifndef configUSE_16_BIT_TICKS
+#define EVENT_GROUP_BITS 24
+#else
+#define EVENT_GROUP_BITS 8
+#endif
+
 static const char *TAG = "STATE_TASKS";
 
 void error_task(void *args)
@@ -18,6 +24,21 @@ void error_task(void *args)
         app_state_wait_for_event(STATE_TYPE_ERROR, APP_STATE_UPDATE);
 
         EventBits_t error_bits = app_state_get(STATE_TYPE_ERROR);
+
+        int i;
+        for (i = 0; i < EVENT_GROUP_BITS; i++)
+        {
+            // check if the bit is set
+            if (error_bits && BIT(i))
+            {
+                // write the error to the output
+                set_output_level(i, 1);
+            }
+            else
+            {
+                set_output_level(i, 0);
+            }
+        }
 
         ESP_LOGI(TAG, "Error event: %lx", error_bits);
 

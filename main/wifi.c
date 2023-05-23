@@ -19,8 +19,6 @@ static const char *TAG = "WIFI";
 
 static int s_retry_count = 0;
 
-static EventGroupHandle_t s_wifi_event_group;
-
 static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
     if (event_base == WIFI_EVENT)
@@ -72,7 +70,14 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
 void wifi_connect_to_station()
 {
     ESP_LOGI(TAG, "Setting up WiFi in station mode");
-    s_wifi_event_group = xEventGroupCreate();
+
+    // get the default handle for the net interface
+    esp_netif_t *netif_handle = NULL;
+
+    netif_handle = esp_netif_next(netif_handle);
+
+    // set the hostname of the device
+    esp_netif_set_hostname(netif_handle, CONFIG_WIFI_HOST);
 
     // initialize net interface
     ESP_ERROR_CHECK(esp_netif_init());
@@ -119,5 +124,4 @@ void wifi_connect_to_station()
 
     /* The event will not be processed after unregister */
     ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));
-    vEventGroupDelete(s_wifi_event_group);
 }

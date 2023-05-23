@@ -30,6 +30,12 @@ config IOT_AGENT_DEVICE_ID
         The ID of this device in the IoT Agent
 endmenu
 menu "WiFi Connection"
+    config WIFI_HOST
+        string "WiFi Hostname"
+        default "EmbeddedDeviceInterface"
+        help 
+            The WiFi hostname of the device
+            
     config WIFI_SSID
         string "WiFi SSID"
         help
