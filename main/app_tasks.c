@@ -6,6 +6,7 @@
 
 #include "app_state.h"
 #include "io.h"
+#include "analog.h"
 
 #ifndef configUSE_16_BIT_TICKS
 #define EVENT_GROUP_BITS 24
@@ -84,4 +85,18 @@ void input_task(void *args)
 
 void internal_task(void *args)
 {
+}
+
+void analog_measure_task(void *args)
+{
+    ESP_LOGI(TAG, "Starting analog measure task");
+    config_analog();
+
+    while (1)
+    {
+        uint32_t voltage = analog_measure_voltage();
+        ESP_LOGI(TAG, "Measured voltage: %ld", voltage);
+
+        vTaskDelay(5000 / portTICK_PERIOD_MS);
+    }
 }
