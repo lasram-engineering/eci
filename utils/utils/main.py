@@ -5,6 +5,7 @@ from os import getenv
 from pathlib import Path
 import sys
 from typing import Dict, List
+import click
 from colorama import Back, Style
 
 import requests
@@ -15,6 +16,7 @@ from . import getLogger
 FIWARE_IOTA_HOST = getenv("FIWARE_IOTA_HOST")
 FIWARE_IOTA_NORTH_PORT = getenv("FIWARE_IOTA_NORTH_PORT")
 
+FIWARE_IOTA_RESOURCE = getenv("FIWARE_IOTA_RESOURCE")
 FIWARE_IOTA_APIKEY = getenv("FIWARE_IOTA_APIKEY")
 FIWARE_IOTA_DEVICE_ID = getenv("FIWARE_IOTA_DEVICE_ID")
 
@@ -31,6 +33,7 @@ logger = getLogger(__file__, '')
 
 def check_env_vars():
     env_vars = [FIWARE_IOTA_HOST, FIWARE_IOTA_NORTH_PORT,
+                FIWARE_IOTA_RESOURCE,
                 FIWARE_IOTA_APIKEY, FIWARE_IOTA_DEVICE_ID,
                 FIWARE_IOTA_SERVICE, FIWARE_IOTA_SERVICEPATH]
 
@@ -98,6 +101,7 @@ def register_service_group():
 
     else:
         print(f"{Back.YELLOW} ERROR {Style.RESET_ALL}")
+        logger.error(f"{response.status_code} -> {response.json()}")
         sys.exit(4)
 
 
@@ -146,6 +150,7 @@ def register_device():
 
     else:
         print(f"{Back.YELLOW} ERROR {Style.RESET_ALL}")
+        logger.error(f"{response.status_code} -> {response.json()}")
         sys.exit(4)
 
 
@@ -164,6 +169,62 @@ def check_config():
     if not check_device_exists():
         # register it
         register_device()
+
+
+def delete_service_group():
+    logger.info("Deleting IoT service group...   ")
+
+    response = requests.delete(
+        f"http://{FIWARE_IOTA_HOST}:{FIWARE_IOTA_NORTH_PORT}/iot/services",
+        params={
+            'resource': FIWARE_IOTA_RESOURCE,
+            'apikey': FIWARE_IOTA_APIKEY
+        },
+        headers=HEADERS
+    )
+
+    if response.ok:
+        print(f"{Back.GREEN}   OK   {Style.RESET_ALL}")
+
+    else:
+        print(f"{Back.YELLOW} ERROR {Style.RESET_ALL}")
+        logger.error(f"{response.status_code} -> {response.json()}")
+
+        sys.exit(4)
+
+
+def delete_iot_device():
+    logger.info("Deleting IoT device...   ")
+
+    response = requests.delete(
+        f"http://{FIWARE_IOTA_HOST}:{FIWARE_IOTA_NORTH_PORT}/iot/devices/{FIWARE_IOTA_DEVICE_ID}",
+        headers=HEADERS
+    )
+
+    if response.ok:
+        print(f"{Back.GREEN}   OK   {Style.RESET_ALL}")
+
+    else:
+        print(f"{Back.YELLOW} ERROR {Style.RESET_ALL}")
+        logger.error(f"{response.status_code} -> {response.json()}")
+
+        sys.exit(4)
+
+
+@click.group(invoke_without_command=True)
+@click.pass_context
+def cli(ctx):
+    if ctx.invoked_subcommand is None:
+        check_config()
+
+
+@cli.command()
+def clear():
+    logger.info("Clearing IoT Agent...   ")
+    print(f"{Back.BLUE} RUNNING {Style.RESET_ALL}")
+
+    delete_service_group()
+    delete_iot_device()
 
 
 if __name__ == '__main__':

@@ -6,8 +6,8 @@
             "entity_type": "EDI",
             "attributes": [
                 {
-                    "object_id": "c",
-                    "name": "count",
+                    "object_id": "a",
+                    "name": "analog_voltage_measurement",
                     "type": "Integer"
                 }
             ]
