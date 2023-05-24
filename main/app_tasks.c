@@ -3,10 +3,12 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <esp_log.h>
+#include <string.h>
 
 #include "app_state.h"
 #include "io.h"
 #include "analog.h"
+#include "fiware.h"
 
 #ifndef configUSE_16_BIT_TICKS
 #define EVENT_GROUP_BITS 24
@@ -93,10 +95,22 @@ void analog_measure_task(void *args)
     ESP_LOGI(TAG, "Starting analog measure task");
     config_analog();
 
+    // voltage must be between 0~3300 -> 4 + \0 char
+    char voltage_str[5];
+
     while (1)
     {
         uint32_t voltage = analog_measure_voltage();
         ESP_LOGI(TAG, "Measured voltage: %ld", voltage);
+
+        EventBits_t status_bits = app_state_get(STATE_TYPE_INTERNAL);
+
+        if (status_bits & APP_STATE_INTERNAL_WIFI_CONNECTED)
+        {
+            sprintf(voltage_str, "%ld", voltage);
+
+            fiware_update_attribute('a', voltage_str);
+        }
 
         vTaskDelay(CONFIG_ANALOG_TASK_DELAY / portTICK_PERIOD_MS);
     }
