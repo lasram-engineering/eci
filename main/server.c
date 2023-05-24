@@ -6,15 +6,40 @@
 #include "fiware.h"
 #include "app_state.h"
 
+#define RESPONSE_BUFFER_LENGTH 2 * (15 + APP_STATE_LENGTH) + 1
+
 static const char *TAG = "Server";
+
+static char response[RESPONSE_BUFFER_LENGTH];
 
 esp_err_t get_handler(httpd_req_t *request)
 {
-    char response[] = "OK";
+    strcpy(response, "Error buffer: ");
+
+    EventBits_t error_bits = app_state_get(STATE_TYPE_ERROR);
+
+    int i;
+    for (i = APP_STATE_LENGTH - 1; 0 <= i; i--)
+    {
+        char *bit_str = error_bits & BIT(i) ? "1" : "0";
+        strcat(response, bit_str);
+    }
+
+    strcat(response, "\nInput buffer: ");
+
+    error_bits = app_state_get(STATE_TYPE_INPUT);
+
+    ESP_LOGI(TAG, "APP input state %ld", error_bits);
+
+    for (i = APP_STATE_LENGTH - 1; 0 <= i; i--)
+    {
+        char *bit_str = error_bits & BIT(i) ? "1" : "0";
+        strcat(response, bit_str);
+    }
 
     httpd_resp_send(request, response, HTTPD_RESP_USE_STRLEN);
 
-    fiware_update_attribute('c', "1");
+    strcpy(response, "");
 
     return ESP_OK;
 }
