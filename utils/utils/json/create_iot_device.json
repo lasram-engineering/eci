@@ -1,0 +1,16 @@
+{
+    "devices": [
+        {
+            "device_id": "edi001",
+            "entity_name": "EDI:001",
+            "entity_type": "EDI",
+            "attributes": [
+                {
+                    "object_id": "c",
+                    "name": "count",
+                    "type": "Integer"
+                }
+            ]
+        }
+    ]
+}
