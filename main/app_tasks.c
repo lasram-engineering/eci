@@ -28,7 +28,7 @@ void error_task(void *args)
     ESP_LOGI(TAG, "Starting error task");
     while (1)
     {
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        vTaskDelay(CONFIG_ERROR_TASK_DELAY / portTICK_PERIOD_MS);
 
         // wait for the error state to be updated
         app_state_wait_for_event(STATE_TYPE_ERROR, APP_STATE_ANY);
@@ -66,7 +66,7 @@ void input_task(void *args)
     init_io();
     while (1)
     {
-        vTaskDelay(100 / portTICK_PERIOD_MS);
+        vTaskDelay(CONFIG_INPUT_TASK_DELAY / portTICK_PERIOD_MS);
         // wait for the input state to be updated
         app_state_wait_for_event(STATE_TYPE_INPUT, APP_STATE_ANY);
 
@@ -85,6 +85,7 @@ void input_task(void *args)
 
 void internal_task(void *args)
 {
+    // check the fiware iot agent connection
 }
 
 void analog_measure_task(void *args)
@@ -97,6 +98,6 @@ void analog_measure_task(void *args)
         uint32_t voltage = analog_measure_voltage();
         ESP_LOGI(TAG, "Measured voltage: %ld", voltage);
 
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        vTaskDelay(CONFIG_ANALOG_TASK_DELAY / portTICK_PERIOD_MS);
     }
 }
