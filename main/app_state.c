@@ -5,7 +5,11 @@
 #include <freertos/semphr.h>
 #include <esp_log.h>
 
+#if APP_STATE_LENGTH == 8
+#define BITS_ALL 0xFF
+#elif APP_STATE_LENGTH == 24
 #define BITS_ALL 0xFFFFFF
+#endif
 
 static const char *TAG = "STATE";
 static EventGroupHandle_t app_state_error;

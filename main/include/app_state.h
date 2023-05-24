@@ -6,9 +6,11 @@
 
 #ifndef configUSE_16_BIT_TICKS
 // event group is 8 bits long
-#define APP_STATE_ANY 0xFFFF
+#define APP_STATE_LENGTH 8
+#define APP_STATE_ANY 0xFF
 #else
 // event group is 24 bits long
+#define APP_STATE_LENGTH 24
 #define APP_STATE_ANY 0xFFFFFF
 #endif
 
