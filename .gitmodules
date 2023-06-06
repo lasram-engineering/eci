@@ -1,0 +1,3 @@
+[submodule "premet-utils"]
+	path = premet-utils
+	url = https://github.com/ppuska/premet-utils
