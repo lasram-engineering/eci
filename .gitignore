@@ -1,6 +1,3 @@
 build/
 sdkconfig
 sdkconfig.old
-
-utils/.venv
-__pycache__
