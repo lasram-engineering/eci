@@ -25,7 +25,8 @@
         "tuple": "c",
         "type_traits": "c",
         "utility": "c",
-        "app_state.h": "c"
+        "app_state.h": "c",
+        "spi_task.h": "c"
     },
     "C_Cpp.intelliSenseEngine": "Tag Parser"
 }
