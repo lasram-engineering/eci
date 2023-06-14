@@ -5,6 +5,7 @@
 
 #include <esp_log.h>
 #include <esp_err.h>
+#include <esp_wifi.h>
 #include <esp_http_client.h>
 #include <driver/uart.h>
 
@@ -78,12 +79,26 @@ static esp_http_client_config_t get_health_config = {
 
 esp_err_t fiware_update_attribute(const char name, const char *value)
 {
-    // initialize the client
-    esp_http_client_handle_t client = esp_http_client_init(&update_attribute_config);
     char *attribute = make_payload(name, value);
 
+    fiware_update_attribute_raw(attribute);
+    free(attribute);
+
+    return ESP_OK;
+}
+
+esp_err_t fiware_update_attribute_raw(const char *raw_attr_payload)
+{
+    if (!(app_state_get(STATE_TYPE_INTERNAL) & (1 << APP_STATE_INTERNAL_WIFI_CONNECTED)))
+    {
+        return ESP_ERR_WIFI_CONN;
+    }
+
+    // initialize the client
+    esp_http_client_handle_t client = esp_http_client_init(&update_attribute_config);
+
     // set the POST data field
-    esp_http_client_set_post_field(client, attribute, strlen(attribute));
+    esp_http_client_set_post_field(client, raw_attr_payload, strlen(raw_attr_payload));
 
     // set the header
     esp_http_client_set_header(client, "Content-Type", "text/plain");
@@ -91,6 +106,8 @@ esp_err_t fiware_update_attribute(const char name, const char *value)
     // send the request
     esp_err_t err = esp_http_client_perform(client);
     ESP_LOGI(TAG, "Making POST request to %s", IOT_AGENT_URL);
+
+    esp_err_t ret;
 
     if (err == ESP_OK)
     {
@@ -105,28 +122,39 @@ esp_err_t fiware_update_attribute(const char name, const char *value)
                 CONFIG_IOT_AGENT_DEVICE_ID,
                 CONFIG_IOT_AGENT_APIKEY);
 
-            return ESP_ERR_HTTP_BASE;
+            ret = ESP_ERR_HTTP_BASE;
         }
         else if (status >= 300)
         {
             app_state_set(STATE_TYPE_ERROR, APP_STATE_ERROR_IOTA_ERROR);
             ESP_LOGW(TAG, "Error while updating attribute: %d", status);
 
-            return ESP_ERR_HTTP_BASE;
+            ret = ESP_ERR_HTTP_BASE;
         }
-
-        ESP_LOGI(TAG, "Updated attribute of %s: %c -> %s", CONFIG_IOT_AGENT_DEVICE_ID, name, value);
+        else
+        {
+            ESP_LOGI(TAG, "Set attributes of device '%s' to '%s'", CONFIG_IOT_AGENT_DEVICE_ID, raw_attr_payload);
+            ret = ESP_OK;
+        }
+    }
+    else
+    {
+        ret = err;
     }
 
     // cleanup
     esp_http_client_cleanup(client);
-    free(attribute);
 
-    return ESP_OK;
+    return ret;
 }
 
 esp_err_t fiware_check_health()
 {
+    if (!(app_state_get(STATE_TYPE_INTERNAL) & (1 << APP_STATE_INTERNAL_WIFI_CONNECTED)))
+    {
+        return ESP_ERR_WIFI_CONN;
+    }
+
     esp_http_client_handle_t client = esp_http_client_init(&get_health_config);
 
     esp_err_t err = esp_http_client_perform(client);
