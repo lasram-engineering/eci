@@ -6,6 +6,8 @@
 #include <driver/uart.h>
 #include <esp_log.h>
 
+#include "app_state.h"
+
 // UART pins for MAU
 #define UART_RX_MAU 2
 #define UART_TX_MAU 0
@@ -151,6 +153,9 @@ void uart_task(void *arg)
 
         if (ret == ESP_OK)
         {
+            // reset the error bit
+            app_state_unset(STATE_TYPE_ERROR, APP_STATE_ERROR_MAU_NOT_AVAIL);
+
             if (strcmp(uart_response, "OK") == 0)
             {
                 ESP_LOGI(TAG, "Success");
@@ -168,6 +173,7 @@ void uart_task(void *arg)
         {
             // request has timed out
             ESP_LOGE(TAG, "MA Unit not available");
+            app_state_set(STATE_TYPE_ERROR, APP_STATE_ERROR_MAU_NOT_AVAIL);
         }
 
         // clear the uart response
