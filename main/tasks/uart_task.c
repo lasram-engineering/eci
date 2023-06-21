@@ -33,15 +33,15 @@
 
 // transmission flags from the Kawasaki controller
 /** Enquiry, this means the beginning of a transmission */
-#define UNICODE_ENQ 5
+static const char UNICODE_ENQ = 5;
 /** Acknowledge */
-#define UNICODE_ACK 6
+static const char UNICODE_ACK = 6;
 /** Start of text, after this comes the payload */
-#define UNICODE_STX 2
+static const char UNICODE_STX = 2;
 /** End of text, this follows the payload */
-#define UNICODE_ETX 3
+static const char UNICODE_ETX = 3;
 /** End of transmission, this closes the transmission */
-#define UNICODE_EOT 4
+static const char UNICODE_EOT = 4;
 
 static char *TAG = "UART";
 static char uart_response[UART_MAX_RESPONSE_LENGTH];
@@ -66,7 +66,7 @@ static uart_config_t uart_config_robot = {
     .data_bits = UART_DATA_8_BITS,
     .parity = UART_PARITY_DISABLE,
     .stop_bits = UART_STOP_BITS_1,
-    .flow_ctrl = UART_HW_FLOWCTRL_CTS, // TODO test this
+    .flow_ctrl = UART_HW_FLOWCTRL_DISABLE, // TODO test this
     .source_clk = UART_SCLK_DEFAULT,
 };
 
@@ -112,7 +112,8 @@ esp_err_t uart_read_string(uart_port_t port)
  */
 esp_err_t uart_read_transmission(uart_port_t port)
 {
-    char input = '';
+    char input;
+    int ret;
 
     while (input != UNICODE_ENQ)
     {
@@ -125,18 +126,17 @@ esp_err_t uart_read_transmission(uart_port_t port)
     }
 
     // after the ENQ is received, send an ACK
-    uart_write_bytes(port, UNICODE_ACK, 1);
+    uart_write_bytes(port, &UNICODE_ACK, 1);
 
     // after the ACK was sent, the controller will send a STX
     ret = uart_read_bytes(port, &input, 1, PROTOCOL_T3 / portTICK_PERIOD_MS);
 
-    if (ret <= 0)
+    if (ret <= 0 || input != UNICODE_STX)
     {
         // send abnormal EOT back
-        uart_write_bytes(port, UNICODE_EOT, 1);
+        uart_write_bytes(port, &UNICODE_EOT, 1);
         return ESP_ERR_INVALID_RESPONSE;
     }
-
     // after this, read until the ETX flag is sent
     int i = 0;
     for (i = 0; i < UART_MAX_RESPONSE_LENGTH; i++)
@@ -147,7 +147,7 @@ esp_err_t uart_read_transmission(uart_port_t port)
         if (ret <= 0)
             return ESP_ERR_TIMEOUT;
 
-        if (input != ETX)
+        if (input != UNICODE_ETX)
         {
             uart_response[i] = input;
         }
@@ -162,10 +162,12 @@ esp_err_t uart_read_transmission(uart_port_t port)
     }
 
     // send back the ACK signal
-    uart_write_bytes(port, UNICODE_ACK, 1);
+    uart_write_bytes(port, &UNICODE_ACK, 1);
 
     // receive the EOT flag
     uart_read_bytes(port, &input, 1, portMAX_DELAY);
+
+    return ESP_OK;
 }
 
 void uart_task(void *arg)
@@ -207,55 +209,18 @@ void uart_task(void *arg)
      */
     char setMotorSpeed[21];
 
+    esp_err_t ret;
+
     while (1)
     {
-        vTaskDelay(5000 / portTICK_PERIOD_MS);
+        // wait for the transmission
+        ret = uart_read_transmission(uart_robot);
 
-        sprintf(setMotorSpeed, "DO|MOTOR SPEED|%d\n", 1000);
-        uart_write_bytes(uart_mau, setMotorSpeed, strlen(setMotorSpeed));
-
-        if (motorRun)
-        {
-            ESP_LOGI(TAG, "Turning on motor");
-            uart_write_bytes(uart_mau, startMotor, strlen(startMotor));
-        }
+        if (ret == ESP_ERR_TIMEOUT)
+            ESP_LOGE(TAG, "Read timed out");
+        else if (ret == ESP_ERR_INVALID_RESPONSE)
+            ESP_LOGE(TAG, "Invalid response");
         else
-        {
-            ESP_LOGI(TAG, "Turning motor off");
-            uart_write_bytes(uart_mau, stopMotor, strlen(stopMotor));
-        }
-
-        // check response
-        esp_err_t ret = uart_read_string(uart_mau);
-
-        if (ret == ESP_OK)
-        {
-            // reset the error bit
-            app_state_unset(STATE_TYPE_ERROR, APP_STATE_ERROR_MAU_NOT_AVAIL);
-
-            if (strcmp(uart_response, "OK") == 0)
-            {
-                ESP_LOGI(TAG, "Success");
-            }
-            else if (strcmp(uart_response, "ERROR") == 0)
-            {
-                ESP_LOGW(TAG, "Error");
-            }
-            else
-            {
-                ESP_LOGE(TAG, "Unknown response: %s", uart_response);
-            }
-        }
-        else
-        {
-            // request has timed out
-            ESP_LOGE(TAG, "MA Unit not available");
-            app_state_set(STATE_TYPE_ERROR, APP_STATE_ERROR_MAU_NOT_AVAIL);
-        }
-
-        // clear the uart response
-        strcpy(uart_response, "");
-
-        motorRun = !motorRun;
+            ESP_LOGI(TAG, "Incoming transmission: %s", uart_response);
     }
 }
