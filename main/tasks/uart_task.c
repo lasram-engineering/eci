@@ -28,6 +28,21 @@
 
 #define UART_MAX_RESPONSE_LENGTH 32
 
+/** If no payload arrives after this time has elapsed from the ACK send end the transmission */
+#define PROTOCOL_T3 1000
+
+// transmission flags from the Kawasaki controller
+/** Enquiry, this means the beginning of a transmission */
+#define UNICODE_ENQ 5
+/** Acknowledge */
+#define UNICODE_ACK 6
+/** Start of text, after this comes the payload */
+#define UNICODE_STX 2
+/** End of text, this follows the payload */
+#define UNICODE_ETX 3
+/** End of transmission, this closes the transmission */
+#define UNICODE_EOT 4
+
 static char *TAG = "UART";
 static char uart_response[UART_MAX_RESPONSE_LENGTH];
 
@@ -89,6 +104,68 @@ esp_err_t uart_read_string(uart_port_t port)
     uart_response[i] = '\0';
 
     return ESP_OK;
+}
+
+/**
+ * Waits until an incoming transmission from the robot controller
+ * When the transmission comes in, decodes it and puts it in the response string
+ */
+esp_err_t uart_read_transmission(uart_port_t port)
+{
+    char input = '';
+
+    while (input != UNICODE_ENQ)
+    {
+        // wait until an ENQ byte comes
+        // hangs indefinitely
+        ret = uart_read_bytes(port, &input, 1, portMAX_DELAY);
+
+        if (ret <= 0)
+            return ESP_ERR_TIMEOUT;
+    }
+
+    // after the ENQ is received, send an ACK
+    uart_write_bytes(port, UNICODE_ACK, 1);
+
+    // after the ACK was sent, the controller will send a STX
+    ret = uart_read_bytes(port, &input, 1, PROTOCOL_T3 / portTICK_PERIOD_MS);
+
+    if (ret <= 0)
+    {
+        // send abnormal EOT back
+        uart_write_bytes(port, UNICODE_EOT, 1);
+        return ESP_ERR_INVALID_RESPONSE;
+    }
+
+    // after this, read until the ETX flag is sent
+    int i = 0;
+    for (i = 0; i < UART_MAX_RESPONSE_LENGTH; i++)
+    {
+        // read byte by byte
+        ret = uart_read_bytes(port, &input, 1, portMAX_DELAY);
+
+        if (ret <= 0)
+            return ESP_ERR_TIMEOUT;
+
+        if (input != ETX)
+        {
+            uart_response[i] = input;
+        }
+        else
+        {
+            // the payload has ended
+            // terminate the string
+            uart_response[i] = '\0';
+
+            break;
+        }
+    }
+
+    // send back the ACK signal
+    uart_write_bytes(port, UNICODE_ACK, 1);
+
+    // receive the EOT flag
+    uart_read_bytes(port, &input, 1, portMAX_DELAY);
 }
 
 void uart_task(void *arg)
