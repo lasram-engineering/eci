@@ -81,7 +81,7 @@ static uart_config_t uart_config_robot = {
     .data_bits = UART_DATA_8_BITS,
     .parity = UART_PARITY_DISABLE,
     .stop_bits = UART_STOP_BITS_1,
-    .flow_ctrl = UART_HW_FLOWCTRL_DISABLE, // TODO test this
+    .flow_ctrl = UART_HW_FLOWCTRL_DISABLE, // TODO: test this
     .source_clk = UART_SCLK_DEFAULT,
 };
 
@@ -90,6 +90,62 @@ const uart_port_t uart_robot = UART_NUM_1;
 
 QueueHandle_t uart_queue_mau;
 QueueHandle_t uart_queue_robot;
+
+/**
+ * Sends a command to the Measurement and Actuation Unit
+ */
+esp_err_t command_mau_motor(bool motor_on, long int motor_speed)
+{
+    char *command = "MOTOR";
+    uart_write_bytes(uart_mau, "");
+
+    // TODO: implement this
+
+    return ESP_OK;
+}
+
+/**
+ * @returns
+ *  ESP_OK if the payload was successfully processed
+ *  ESP_ERR_INVALID_ARG if the payload could not be parsed
+ */
+esp_err_t process_payload(char *payload)
+{
+    char *token;
+    // get the first token
+    token = strtok(payload, "|");
+
+    if (strcmp(token, "MOTOR") == 0)
+    {
+        // acquire the second command word
+        token = strtok(NULL, "|");
+
+        if (token == NULL)
+            return ESP_ERR_INVALID_ARG;
+
+        if (strcmp(token, "ON") == 0)
+        {
+            ESP_LOGI(TAG, "Turning motor on..."); // TODO: implement this
+            return ESP_OK;
+        }
+        else if (strcmp(token, "OFF") == 0)
+        {
+            ESP_LOGI(TAG, "Turning motor off..."); // TODO: implement this
+            return ESP_OK;
+        }
+        else
+        {
+            // parse the motor speed
+            long int speed = strtol(token, NULL, 10);
+            if (speed == 0L)
+                return ESP_ERR_INVALID_ARG;
+
+            ESP_LOGI(TAG, "Setting motor speed to %ld", speed);
+        }
+    }
+
+    return ESP_OK;
+}
 
 /**
  * Reads from the UART device until a newline termination character is found
@@ -363,6 +419,8 @@ void uart_task(void *arg)
     esp_err_t ret;
 
     char c;
+    const char *responseOk = "OK";
+    const char *responseError = "ERROR";
 
     while (1)
     {
@@ -389,9 +447,17 @@ void uart_task(void *arg)
 
         // ESP_OK
         ESP_LOGI(TAG, "Incoming transmission %s", uart_response);
-        const char *msg = "OK";
-        ESP_LOGI(TAG, "Sending back response");
-        ret = uart_write_transmission(uart_robot, msg);
+
+        ret = process_payload(uart_response);
+
+        if (ret == ESP_OK)
+        {
+            ret = uart_write_transmission(uart_robot, responseOk);
+        }
+        else
+        {
+            ret = uart_write_transmission(uart_robot, responseError);
+        }
 
         if (ret == ESP_ERR_NOT_FINISHED)
         {
