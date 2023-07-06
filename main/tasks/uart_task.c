@@ -20,7 +20,7 @@
 #define UART_TX 5
 #define UART_RTS 18
 #define UART_CTS 19
-#define UART_BAUD_ROBOT 115200
+#define UART_BAUD_ROBOT 9600
 
 #define UART_RX_BUFFER_SIZE 1024
 #define UART_TX_BUFFER_SIZE 1024
@@ -136,7 +136,7 @@ esp_err_t uart_read_transmission_payload(uart_port_t port)
 
     while (1)
     {
-        // wait for the ACK (or EOT)
+        // wait for the STX (or EOT)
         ret = uart_read_bytes(port, &input, 1, PROTOCOL_T3 / portTICK_PERIOD_MS);
 
         // check for timeout
@@ -212,24 +212,35 @@ esp_err_t uart_read_transmission(uart_port_t port)
         // hangs indefinitely
         ret = uart_read_bytes(port, &input, 1, portMAX_DELAY);
 
+        // a timeout has occurred
         if (ret == 0)
             return ESP_ERR_TIMEOUT;
+
+        // the connection has been closed
+        if (input == UNICODE_EOT)
+            return ESP_FAIL;
     }
 
     // after the ENQ is received, send an ACK
     uart_write_bytes(port, &UNICODE_ACK, 1);
 
+    // wait until the TX buffer is empty
+    uart_wait_tx_done(uart_robot, PROTOCOL_T2 / portTICK_PERIOD_MS);
+
     // read the transmission payload
     ret = uart_read_transmission_payload(port);
 
     if (ret != ESP_OK)
+    {
+        ESP_LOGW(TAG, "Error while reading UART transmission");
         return ret;
+    }
 
     // send back the ACK signal
     uart_write_bytes(port, &UNICODE_ACK, 1);
 
     // receive the EOT flag
-    uart_read_bytes(port, &input, 1, portMAX_DELAY);
+    uart_read_bytes(port, &input, 1, PROTOCOL_T2 / portTICK_PERIOD_MS);
 
     return ESP_OK;
 }
@@ -351,30 +362,55 @@ void uart_task(void *arg)
 
     esp_err_t ret;
 
+    char c;
+
     while (1)
     {
         // wait for the transmission
         ret = uart_read_transmission(uart_robot);
 
-        switch (ret)
+        if (ret == ESP_FAIL)
         {
-        case ESP_FAIL:
             ESP_LOGW(TAG, "Incoming transmission read failed");
-            break;
-
-        case ESP_ERR_TIMEOUT:
-            ESP_LOGW(TAG, "Incoming transmission has timed out");
-            break;
-
-        case ESP_ERR_INVALID_RESPONSE:
-            ESP_LOGW(TAG, "Incoming transmission had invalid response");
-            break;
-
-        case ESP_OK:
-            ESP_LOGI(TAG, "Incoming transmission %s", uart_response);
-
-        default:
-            break;
+            continue;
         }
+
+        if (ret == ESP_ERR_TIMEOUT)
+        {
+            ESP_LOGW(TAG, "Incoming transmission has timed out");
+            continue;
+        }
+
+        if (ret == ESP_ERR_INVALID_RESPONSE)
+        {
+            ESP_LOGW(TAG, "Incoming transmission had invalid response");
+            continue;
+        }
+
+        // ESP_OK
+        ESP_LOGI(TAG, "Incoming transmission %s", uart_response);
+        const char *msg = "OK";
+        ESP_LOGI(TAG, "Sending back response");
+        ret = uart_write_transmission(uart_robot, msg);
+
+        if (ret == ESP_ERR_NOT_FINISHED)
+        {
+            ESP_LOGW(TAG, "ENQ collision while writing response");
+            continue;
+        }
+
+        if (ret == ESP_FAIL)
+        {
+            ESP_LOGW(TAG, "Transmission has failed");
+            continue;
+        }
+
+        if (ret == ESP_ERR_INVALID_RESPONSE)
+        {
+            ESP_LOGW(TAG, "Invalid response");
+            continue;
+        }
+
+        ESP_LOGI(TAG, "Response sent");
     }
 }

@@ -8,8 +8,6 @@
 #include "server.h"
 #include "wifi.h"
 #include "app_state.h"
-#include "app_tasks.h"
-#include "io.h"
 #include "fiware.h"
 #include "tasks/common.h"
 
