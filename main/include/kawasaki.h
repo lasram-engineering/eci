@@ -35,6 +35,6 @@ static const char UNICODE_EOT = 4;
 /** Not acknowledge */
 static const char UNICODE_NAK = 15;
 
-esp_err_t kawasaki_read_transmission(uart_port_t port, char *buffer, const int buffer_length, SemaphoreHandle_t lock);
+esp_err_t kawasaki_read_transmission(uart_port_t port, char *buffer, const int buffer_length, TickType_t ticks_to_wait);
 
-esp_err_t kawasaki_write_transmission(uart_port_t port, const char *payload, SemaphoreHandle_t lock);
+esp_err_t kawasaki_write_transmission(uart_port_t port, const char *payload);

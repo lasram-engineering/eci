@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "tasks/mau_task.h"
+#include "tasks/task_intercom.h"
 
 static const char *KW_MOTOR = "MOTOR";
 
@@ -20,25 +21,18 @@ static const char *KW_MOTOR = "MOTOR";
  */
 esp_err_t process_payload(char *payload, TaskHandle_t mau_task_handle)
 {
-    esp_err_t ret;
-
     // if the payload starts with "MOTOR" then send it forward to the MAU
     if (strncmp(payload, KW_MOTOR, strlen(KW_MOTOR)) == 0)
     {
         // copy the payload into the message
-        ret = set_message(payload);
-
-        // if the mau task was busy return the error
-        if (ret != ESP_OK)
-            return ret;
+        set_recv(payload);
 
         configASSERT(mau_task_handle != NULL);
 
         // else notify the task that a new message is read
-        // just notifies the task, notification value is not used
-        xTaskNotify(mau_task_handle, 0x00, eNoAction);
+        xTaskNotifyGive(mau_task_handle);
 
-        return ret;
+        return ESP_OK;
     }
 
     return ESP_ERR_INVALID_ARG;

@@ -7,14 +7,9 @@
 #include <string.h>
 
 #include "uart.h"
+#include "tasks/task_intercom.h"
 
 static const char *TAG = "MAU";
-
-// The spinlock allows the task to enter and exit critical sections
-static portMUX_TYPE spinlock = portMUX_INITIALIZER_UNLOCKED;
-
-// Used to signal to the uart receive task that the task is processing
-SemaphoreHandle_t mau_lock;
 
 /**
  * Configuration for UART MAU
@@ -32,6 +27,7 @@ const uart_port_t uart_num = UART_NUM_2;
 QueueHandle_t uart_queue;
 
 char uart_buffer[UART_BUFFER_LEN];
+char incoming_message[RECV_BUF_LEN];
 
 /**
  * Task function for interaction with the MAU (Measurement and Actuation Unit)
@@ -57,33 +53,18 @@ void mau_task(void *arg)
             UART_QUEUE_SIZE,
             &uart_queue, 0));
 
-    // allocate the semaphore
-    mau_lock = xSemaphoreCreateBinary();
-
-    if (mau_lock == NULL)
-        abort();
-
-    // give the semaphore
-    xSemaphoreGive(mau_lock);
-
     ESP_LOGI(TAG, "Initialization done");
 
     esp_err_t ret;
-    Mau_Response_t response;
 
     while (1)
     {
         // wait for the task to be notified
-        // does not clear bits on entry to wait
-        // clears all the bits on exit
-        // does not store the incoming index
-        // waits indefinitely
-        xTaskNotifyWait(0x00, ULONG_MAX, NULL, portMAX_DELAY);
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+
+        get_recv(incoming_message);
 
         ESP_LOGI(TAG, "Incoming message: %s", incoming_message);
-
-        // take the semaphore
-        xSemaphoreTake(mau_lock);
 
         // send the message to the MAU
         ret = uart_write_bytes(uart_num, incoming_message, sizeof(incoming_message));
@@ -96,44 +77,16 @@ void mau_task(void *arg)
             // an error has occurred
             const char *error_msg = esp_err_to_name(ret);
             ESP_LOGW(TAG, "An error occurred while reading from MAU: %d -> %s", ret, error_msg);
-            response.error_code = ret;
-            strcpy(response.response, error_msg);
+            set_error(error_msg);
         }
         else
         {
             // the response was read
-            strcpy(response.response, uart_buffer);
+            // set the response to the send buffer
+            set_send(uart_buffer);
         }
 
-        // enter critical to write to the response
-        taskENTER_CRITICAL(&spinlock);
-        // copy the response itself
-        strcpy(response_message.response, response.response);
-        // set the error flag
-        response_message.error_code = response.error_code;
-        taskEXIT_CRITICAL(&spinlock);
-
-        xSemaphoreGive(mau_lock);
-
-        // TODO: Implement notification to the UART respond task
-        // TODO: add task busy lock
+        // reset the recv buffer
+        set_recv("");
     }
-}
-
-/**
- * @brief Sets the message string if there is no message being processed
- *
- * @param message the message to be set
- * @return esp_err_t ESP_FAIL if the message cannot be set else ESP_OK
- */
-esp_err_t set_message(const char *message)
-{
-    // check if the semaphore is available
-    if (xSemaphoreTake(mau_lock, 0) == pdFALSE)
-        return ESP_FAIL;
-
-    // if the semaphore can be taken, update the message
-    strcpy(incoming_message, message);
-
-    return ESP_OK;
 }

@@ -84,14 +84,14 @@ esp_err_t kawasaki_read_transmission_payload(uart_port_t port, char *buffer, con
  * @param port the uart port to use
  * @param buffer the character buffer to write the transmission into
  * @param buffer_length the length of the input buffer
- * @param lock the semaphpore object to lock out other operations during the transmission
+ * @param ticks_to_wait the time in ticks to wait before timing out
  * @returns
  *  ESP_OK if successful,
  *  ESP_FAIL if there was an error,
  *  ESP_TIMEOUT if there was a timeout
  *  ESP_ERR_INVALID_RESPONSE if the response was invalid
  */
-esp_err_t kawasaki_read_transmission(uart_port_t port, char *buffer, const int buffer_length, SemaphoreHandle_t lock)
+esp_err_t kawasaki_read_transmission(uart_port_t port, char *buffer, const int buffer_length, TickType_t ticks_to_wait)
 {
 
     // wait until the semaphore is available
@@ -104,21 +104,17 @@ esp_err_t kawasaki_read_transmission(uart_port_t port, char *buffer, const int b
     {
         // wait until an ENQ byte comes
         // hangs indefinitely
-        ret = uart_read_bytes(port, &input, 1, portMAX_DELAY);
+        ret = uart_read_bytes(port, &input, 1, ticks_to_wait);
 
         // a timeout has occurred
         if (ret == 0)
         {
-            // release the lock
-            xSemaphoreGive(lock);
             return ESP_ERR_TIMEOUT;
         }
 
         // the connection has been closed
         if (input == UNICODE_EOT)
         {
-            // release the lock
-            xSemaphoreGive(lock);
             return ESP_FAIL;
         }
     }
@@ -135,8 +131,6 @@ esp_err_t kawasaki_read_transmission(uart_port_t port, char *buffer, const int b
     if (ret != ESP_OK)
     {
         ESP_LOGW(TAG, "Error while reading UART transmission: %s", esp_err_to_name(ret));
-        // release the lock
-        xSemaphoreGive(lock);
         return ret;
     }
 
@@ -146,8 +140,6 @@ esp_err_t kawasaki_read_transmission(uart_port_t port, char *buffer, const int b
     // receive the EOT flag
     uart_read_bytes(port, &input, 1, PROTOCOL_T2 / portTICK_PERIOD_MS);
 
-    // release the lock
-    xSemaphoreGive(lock);
     return ESP_OK;
 }
 
@@ -162,10 +154,8 @@ esp_err_t kawasaki_read_transmission(uart_port_t port, char *buffer, const int b
  *  ESP_ERR_NOT_FINISHED if there was an ENQ collision (check uart_response)
  *  ESP_FAIL if the transmission has failed
  */
-esp_err_t kawasaki_write_transmission(uart_port_t port, const char *payload, SemaphoreHandle_t lock)
+esp_err_t kawasaki_write_transmission(uart_port_t port, const char *payload)
 {
-
-    xSemaphoreTake(lock, portMAX_DELAY);
 
     esp_err_t ret;
     char input;
@@ -187,8 +177,6 @@ esp_err_t kawasaki_write_transmission(uart_port_t port, const char *payload, Sem
             // this can happen if there is a timeout or the input is an ENQ
             if (ret == 0 || input == UNICODE_ENQ)
             {
-                // release the lock
-                xSemaphoreGive(lock);
                 return ESP_ERR_NOT_FINISHED;
             }
         }
@@ -220,15 +208,11 @@ esp_err_t kawasaki_write_transmission(uart_port_t port, const char *payload, Sem
             // terminate normally
             uart_write_bytes(port, &UNICODE_EOT, 1);
 
-            // release the lock
-            xSemaphoreGive(lock);
             return ESP_OK;
         }
         else
         {
             // response is invalid
-            // release the lock
-            xSemaphoreGive(lock);
             return ESP_ERR_INVALID_RESPONSE;
         }
     }
@@ -237,7 +221,5 @@ esp_err_t kawasaki_write_transmission(uart_port_t port, const char *payload, Sem
     // terminate abnormally
     uart_write_bytes(port, &UNICODE_EOT, 1);
 
-    // release the lock
-    xSemaphoreGive(lock);
     return ESP_FAIL;
 }

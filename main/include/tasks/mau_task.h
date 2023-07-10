@@ -19,18 +19,4 @@
 /** Specifies the time after a timeout occurs while waiting for a read */
 #define UART_READ_TIMEOUT_MS 1000
 
-typedef struct
-{
-    char response[UART_BUFFER_LEN];
-    esp_err_t error_code;
-} Mau_Response_t;
-
-/** Stores the message from the UART receive task (do not set directly) */
-static char incoming_message[UART_BUFFER_LEN];
-
-/** Stores the response to the UART respond task */
-static Mau_Response_t response_message;
-
 void mau_task(void *arg);
-
-esp_err_t set_message(const char *message);

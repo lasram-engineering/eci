@@ -16,7 +16,10 @@
 
 #define UART_BUF_LEN 32
 
+#define UART_TIMEOUT_MS 100
+
 void uart_task(void *arg);
 
-void uart_receive(void *arg);
-void uart_respond();
+void process_error();
+
+void process_send();
