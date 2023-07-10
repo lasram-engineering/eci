@@ -7,3 +7,7 @@ This application can be used with an ESP32 board to communicate with and control
 The individual components can be seen in the following image:
 
 ![Program components](./docs/hardware.svg)
+
+## Software logic
+
+![Logic](./docs/tasks.svg)
