@@ -26,7 +26,11 @@
         "type_traits": "c",
         "utility": "c",
         "app_state.h": "c",
-        "spi_task.h": "c"
+        "spi_task.h": "c",
+        "system_error": "c",
+        "task.h": "c",
+        "future": "c",
+        "complex": "cpp"
     },
     "C_Cpp.intelliSenseEngine": "Tag Parser"
 }

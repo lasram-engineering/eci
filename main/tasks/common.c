@@ -4,14 +4,21 @@
 #include <esp_log.h>
 
 #include "tasks/uart_task.h"
+#include "tasks/mau_task.h"
 
 #ifdef UART_TASK
-static TaskHandle_t uart_task_handle = NULL;
+static TaskHandle_t uart_task_handle;
+#endif
+#ifdef MAU_TASK
+static TaskHandle_t mau_task_handle;
 #endif
 
 void initialize_tasks()
 {
 #ifdef UART_TASK
-    xTaskCreate(uart_task, "uart_task", 4096, NULL, UART_TASK_PRIO, &uart_task_handle);
+    xTaskCreate(uart_task, "uart_task", 4096, &mau_task_handle, UART_TASK_PRIO, &uart_task_handle);
+#endif
+#ifdef MAU_TASK
+    xTaskCreate(mau_task, "mau_task", 4096, NULL, MAU_TASK_PRIO, &mau_task_handle);
 #endif
 }
