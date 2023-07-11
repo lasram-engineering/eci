@@ -15,9 +15,6 @@
 #include "tasks/task_intercom.h"
 #include "tasks/mau_task.h"
 
-/** Describes a valid uart response of some kind of error */
-#define ESP_ERR_UART_NEG_RESPONSE -2
-
 char *TAG = "UART";
 
 /**

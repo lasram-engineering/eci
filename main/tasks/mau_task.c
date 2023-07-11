@@ -67,7 +67,7 @@ void mau_task(void *arg)
         ESP_LOGI(TAG, "Incoming message: %s", incoming_message);
 
         // send the message to the MAU
-        ret = uart_write_bytes(uart_num, incoming_message, sizeof(incoming_message));
+        ret = uart_write_bytes(uart_num, incoming_message, strlen(incoming_message));
 
         // receive the response from the MAU
         ret = uart_read_string(uart_num, uart_buffer, UART_BUFFER_LEN, UART_READ_TIMEOUT_MS / portTICK_PERIOD_MS);

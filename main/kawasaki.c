@@ -175,7 +175,11 @@ esp_err_t kawasaki_write_transmission(uart_port_t port, const char *payload)
 
             // ENQ collision
             // this can happen if there is a timeout or the input is an ENQ
-            if (ret == 0 || input == UNICODE_ENQ)
+            if (ret == 0)
+            {
+                return ESP_ERR_TIMEOUT;
+            }
+            if (input == UNICODE_ENQ)
             {
                 return ESP_ERR_NOT_FINISHED;
             }
@@ -192,7 +196,7 @@ esp_err_t kawasaki_write_transmission(uart_port_t port, const char *payload)
         // wait for the ACK/NACK for T2
         ret = uart_read_bytes(port, &input, 1, PROTOCOL_T2 / portTICK_PERIOD_MS);
 
-        // if no response, retry
+        // if timeout (no response), retry with inquiry
         if (ret <= 0)
             continue;
 
