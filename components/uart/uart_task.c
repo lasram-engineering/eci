@@ -12,7 +12,7 @@
 #include "app_state.h"
 #include "kawasaki.h"
 #include "communication.h"
-#include "tasks/task_intercom.h"
+#include "task_intercom.h"
 #include "mau_task.h"
 
 char *TAG = "UART";

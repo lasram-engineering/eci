@@ -9,23 +9,4 @@ menu "GPIO"
             bool "Pulldown"
     endchoice
 endmenu
-menu "Task times"
-    config ERROR_TASK_DELAY
-        int "Error task delay [ms]"
-        default 1000
-        help
-            The delay of the error task in ms
-    
-    config INPUT_TASK_DELAY
-        int "Input task delay [ms]"
-        default 100
-        help
-            The delay of the input task in ms
-
-    config ANALOG_TASK_DELAY
-        int "Analog measurement task delay [ms]"
-        default 5000
-        help
-            The delay of the analog measurement task in ms
-endmenu
 

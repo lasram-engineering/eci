@@ -8,7 +8,7 @@
 #include "server.h"
 #include "wifi.h"
 #include "app_state.h"
-#include "tasks/common.h"
+#include "task_manager.h"
 
 #define ERROR_TASK_ENABLED 1
 #define INPUT_TASK_ENABLED 1

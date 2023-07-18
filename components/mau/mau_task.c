@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include "uart.h"
-#include "tasks/task_intercom.h"
+#include "task_intercom.h"
 
 static const char *TAG = "MAU";
 

@@ -1,5 +1,5 @@
 set(COMPONENT_REQUIRES "esp_wifi")
-set(COMPONENT_PRIV_REQUIRES "nvs_flash" "main")
+set(COMPONENT_PRIV_REQUIRES "nvs_flash" "state")
 
 if(CONFIG_WIFI_ENABLED)
     set(COMPONENT_SRCS "wifi.c")
