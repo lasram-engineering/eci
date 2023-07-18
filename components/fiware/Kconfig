@@ -1,0 +1,37 @@
+menu "FIWARE IoT Agent Configuration"
+    config IOT_AGENT_HOST
+        string "IoT Agent Host"
+        default "192.168.1.100"
+        help 
+            The host (IP) of the FIWARE IoT Agent
+    
+    config IOT_AGENT_NORTH_PORT
+        string "IoT Agent North Port"
+        default "4041"
+        help 
+            The north port of the FIWARE IoT Agent
+    
+    config IOT_AGENT_SOUTH_PORT
+        string "IoT Agent South Port"
+        default "7896"
+        help
+            The south port of the FIWARE IoT Agent
+    
+    config IOT_AGENT_RESOURCE
+        string "IoT Agent Resource identifier"
+        default "/iot/d"
+        help 
+            The resource identifier of the FIWARE IoT Agent
+    
+    config IOT_AGENT_APIKEY
+        string "IoT Agent API key"
+        default "openiot"
+        help 
+            The API key of the IoT Agent
+    
+    config IOT_AGENT_DEVICE_ID
+        string "IoT Agent Device ID"
+        default "edi001"
+        help 
+            The ID of this device in the IoT Agent
+    endmenu

@@ -6,6 +6,8 @@
 #include "tasks/uart_task.h"
 #include "tasks/mau_task.h"
 
+#include "iot_agent.h"
+
 #ifdef UART_TASK
 static TaskHandle_t uart_task_handle;
 #endif

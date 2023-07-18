@@ -30,7 +30,8 @@
         "system_error": "c",
         "task.h": "c",
         "future": "c",
-        "complex": "cpp"
+        "complex": "cpp",
+        "esp_http_client.h": "c"
     },
     "C_Cpp.intelliSenseEngine": "Tag Parser"
 }

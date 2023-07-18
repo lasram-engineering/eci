@@ -3,7 +3,6 @@
 #include <esp_log.h>
 #include <esp_http_server.h>
 
-#include "fiware.h"
 #include "app_state.h"
 
 #define RESPONSE_BUFFER_LENGTH 2 * (15 + APP_STATE_LENGTH) + 1
