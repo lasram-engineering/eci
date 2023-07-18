@@ -4,7 +4,7 @@
 #include <freertos/task.h>
 #include <string.h>
 
-#include "tasks/mau_task.h"
+#include "mau_task.h"
 #include "tasks/task_intercom.h"
 
 static const char *KW_MOTOR = "MOTOR";

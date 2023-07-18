@@ -1,4 +1,4 @@
-#include "tasks/uart_task.h"
+#include "uart_task.h"
 
 #include <string.h>
 #include <stdio.h>
@@ -13,7 +13,7 @@
 #include "kawasaki.h"
 #include "communication.h"
 #include "tasks/task_intercom.h"
-#include "tasks/mau_task.h"
+#include "mau_task.h"
 
 char *TAG = "UART";
 
