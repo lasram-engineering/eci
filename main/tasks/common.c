@@ -1,18 +1,19 @@
 #include "tasks/common.h"
 
-#include <freertos/task.h>
-#include <esp_log.h>
-
 #include "tasks/uart_task.h"
 #include "tasks/mau_task.h"
 
-#include "iot_agent.h"
+#include "fiware_task.h"
 
 #ifdef UART_TASK
 static TaskHandle_t uart_task_handle;
 #endif
 #ifdef MAU_TASK
 static TaskHandle_t mau_task_handle;
+#endif
+
+#ifdef CONFIG_FIWARE_TASK_ENABLE
+static TaskHandle_t fiware_task_handle;
 #endif
 
 void initialize_tasks()
@@ -22,5 +23,8 @@ void initialize_tasks()
 #endif
 #ifdef MAU_TASK
     xTaskCreate(mau_task, "mau_task", 4096, NULL, MAU_TASK_PRIO, &mau_task_handle);
+#endif
+#ifdef CONFIG_FIWARE_TASK_ENABLE
+    xTaskCreate(fiware_task, "fiware_task", 2048, NULL, MIN(CONFIG_FIWARE_TASK_PRIO, configMAX_PRIORITIES - 1), &fiware_task_handle);
 #endif
 }

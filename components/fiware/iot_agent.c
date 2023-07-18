@@ -61,7 +61,7 @@ fiware_iota_make_measurement(const char *payload)
 
     if (status_code == 422)
     {
-        ESP_LOGW(TAG, "Could not find device with id" CONFIG_IOT_AGENT_DEVICE_ID "maybe device is not registered?");
+        ESP_LOGW(TAG, "Could not find device with id" CONFIG_IOT_AGENT_DEVICE_ID "maybe device is not registered or invalid poperty?");
     }
 
     return status_code;
