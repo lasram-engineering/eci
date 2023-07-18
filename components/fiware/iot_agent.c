@@ -6,14 +6,16 @@
 #include "app_state.h"
 
 /** URL for FIWARE IoT Agent measurements */
-#define FIWARE_IOTA_MEAS_URL "http://" CONFIG_IOT_AGENT_HOST ":" CONFIG_IOT_AGENT_NORTH_PORT CONFIG_IOT_AGENT_RESOURCE
+#define FIWARE_IOTA_MEAS_URL "http://" CONFIG_IOT_AGENT_HOST ":" CONFIG_IOT_AGENT_SOUTH_PORT CONFIG_IOT_AGENT_RESOURCE
 
 #define FIWARE_IOTA_MEAS_QUERY "?i=" CONFIG_IOT_AGENT_DEVICE_ID "&k=" CONFIG_IOT_AGENT_APIKEY
+
+#define RESPONSE_BUF_LEN 255
 
 static const char *TAG = "IoT Agent";
 
 static const esp_http_client_config_t measurement_config = {
-    .url = FIWARE_IOTA_MEAS_URL FIWARE_IOTA_MEAS_URL,
+    .url = FIWARE_IOTA_MEAS_URL FIWARE_IOTA_MEAS_QUERY,
     .method = HTTP_METHOD_POST,
     .cert_pem = NULL,
 };
@@ -41,7 +43,7 @@ fiware_iota_make_measurement(const char *payload)
     esp_http_client_set_post_field(client, payload, strlen(payload));
 
     // set the content type header
-    esp_http_client_set_header(client, "Content-Type", "application/json");
+    esp_http_client_set_header(client, "Content-Type", "text/plain");
 
     // process the request itself
     esp_http_client_perform(client);
@@ -56,12 +58,17 @@ fiware_iota_make_measurement(const char *payload)
 
     if (status_code == 404)
     {
-        ESP_LOGW(TAG, "Could not find device with apikey" CONFIG_IOT_AGENT_APIKEY "maybe service group is not registered?");
+        ESP_LOGW(TAG, "Could not find device with apikey '" CONFIG_IOT_AGENT_APIKEY "' maybe service group is not registered?");
     }
 
-    if (status_code == 422)
+    else if (status_code == 422)
     {
-        ESP_LOGW(TAG, "Could not find device with id" CONFIG_IOT_AGENT_DEVICE_ID "maybe device is not registered or invalid poperty?");
+        ESP_LOGW(TAG, "Could not find device with id '" CONFIG_IOT_AGENT_DEVICE_ID "' maybe device is not registered or invalid poperty?");
+    }
+
+    else
+    {
+        ESP_LOGW(TAG, "Unexpected status from server: %d", status_code);
     }
 
     return status_code;

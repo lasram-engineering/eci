@@ -1,14 +1,12 @@
 #include "fiware_task.h"
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/queue.h>
 #include <esp_log.h>
 
 #include "iot_agent.h"
 
 static const char *TAG = "FIWARE Task";
 
-QueueHandle_t fiware_iota_measurement_queue;
+QueueHandle_t fiware_iota_measurement_queue = NULL;
 
 void fiware_task()
 {
