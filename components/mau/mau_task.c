@@ -1,4 +1,4 @@
-#include "tasks/mau_task.h"
+#include "mau_task.h"
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
