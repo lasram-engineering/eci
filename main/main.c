@@ -10,10 +10,6 @@
 #include "app_state.h"
 #include "task_manager.h"
 
-#define ERROR_TASK_ENABLED 1
-#define INPUT_TASK_ENABLED 1
-#define ANALOG_TASK_ENABLED 1
-
 static httpd_handle_t server = NULL;
 
 void app_main(void)
