@@ -29,5 +29,7 @@ void fiware_task()
         xQueueReceive(fiware_iota_measurement_queue, &payload, portMAX_DELAY);
 
         fiware_iota_make_measurement(payload);
+
+        // TODO implement additional task logic from docs
     }
 }

@@ -85,5 +85,7 @@ esp_err_t process_payload(char *payload, TaskHandle_t mau_task_handle)
         return ESP_OK;
     }
 
+    // TODO: Add END command processing
+
     return ESP_ERR_INVALID_ARG;
 }

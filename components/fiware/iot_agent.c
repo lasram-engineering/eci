@@ -1,5 +1,7 @@
 #include "iot_agent.h"
 
+#include <string.h>
+
 #include <esp_http_client.h>
 #include <esp_log.h>
 
@@ -72,4 +74,82 @@ fiware_iota_make_measurement(const char *payload)
     }
 
     return status_code;
+}
+
+/**
+ * @brief Parses UltraLight 2.0 commands from the IoT Agent
+ *
+ * @param raw_command the raw command string to parse
+ * @param command the command type to load the values into
+ * @return esp_err_t    ESP_ERR_INVALID_ARG if the command contained illegal fields
+ *                      ESP_FAIL if the command could not be parsed
+ *                      ESP_ERR_INVALID_SIZE if the command name or payload was too large
+ */
+esp_err_t fiware_iota_parse_command(char *raw_command, fiware_iota_command_t *command)
+{
+    // * command syntax: <device_id>@<command_name>|<param1>|<param2>|...
+
+    // retrieve the token before the @ symbol
+    char *token = strtok(raw_command, "@");
+
+    // if the token is not found, the command is invalid
+    if (token == NULL)
+    {
+        ESP_LOGI(TAG, "Invalid command syntax: %s", raw_command);
+        return ESP_FAIL;
+    }
+
+    // check if the device id matches with the config device id
+    if (strcmp(token, CONFIG_IOT_AGENT_DEVICE_ID) != 0)
+    {
+#ifdef CONFIG_IOT_AGENT_COMMAND_STRICT
+        ESP_LOGE(TAG, "Incoming command device id does not match stored id: '%s' vs '%s'", token, CONFIG_IOT_AGENT_DEVICE_ID);
+        return ESP_ERR_INVALID_ARG;
+#else
+        ESP_LOGW(TAG, "Incoming command device id does not match stored id: '%s' vs '%s'", token, CONFIG_IOT_AGENT_DEVICE_ID);
+#endif
+    }
+
+    // check the first token before the pipe symbol (command name)
+    token = strtok(NULL, "|");
+
+    if (token == NULL)
+    {
+        ESP_LOGI(TAG, "Invalid command syntax: %s", raw_command);
+        return ESP_FAIL;
+    }
+
+    int token_len = strlen(token);
+
+    // check if the token fits in the allocated buffer
+    if (token_len >= CONFIG_IOT_AGENT_COMMAND_NAME_LEN)
+    {
+        ESP_LOGE(TAG, "Command name too long: %s (%d > %d)", token, token_len, CONFIG_IOT_AGENT_COMMAND_NAME_LEN);
+        return ESP_ERR_INVALID_SIZE;
+    }
+
+    // copy the command name into the buffer
+    strcpy(command->command_name, token);
+
+    // load the payload
+    token = strtok(NULL, "|");
+
+    if (token == NULL)
+    {
+        ESP_LOGI(TAG, "Invalid command syntax: %s", raw_command);
+        return ESP_FAIL;
+    }
+
+    token_len = strlen(token);
+
+    if (token_len >= CONFIG_IOT_AGENT_COMMAND_PAYLOAD_LEN)
+    {
+        ESP_LOGE(TAG, "Command payload too long: %s (%d > %d)", token, token_len, CONFIG_IOT_AGENT_COMMAND_PAYLOAD_LEN);
+        return ESP_ERR_INVALID_SIZE;
+    }
+
+    // copy the payload into the buffer
+    strcpy(command->command_param, token);
+
+    return ESP_OK;
 }

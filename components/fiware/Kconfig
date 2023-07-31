@@ -1,4 +1,6 @@
 menu "FIWARE IoT Agent Configuration"
+    depends on FIWARE_TASK_ENABLE
+
     config IOT_AGENT_HOST
         string "IoT Agent Host"
         default "192.168.1.100"
@@ -34,6 +36,37 @@ menu "FIWARE IoT Agent Configuration"
         default "edi001"
         help 
             The ID of this device in the IoT Agent
+            
+    config IOT_DEVICE_ENDPOINT
+        string "IoT Device Endpoint"
+        default "/api"
+        help
+            The endpoint on which the HTTP server listens to incoming commands
+                    
+    menu "COMMANDS"
+        config IOT_AGENT_COMMAND_STRICT
+            bool "Iot Agent strict command checking"
+            help
+                If the flag is set an incoming IoT Agent command will only be executed if the device ID matches
+
+        config IOT_AGENT_COMMAND_NAME_LEN
+            int "IoT Agent UltraLight command name length"
+            default 32
+            help
+                The length of the buffer that stores the incoming command name
+
+        config IOT_AGENT_COMMAND_PAYLOAD_LEN
+            int "IoT Agent UltraLight command payload length"
+            default 255
+            help
+                The length of the buffer that stores the incoming command payload
+                        
+        config IOT_AGENT_COMMAND_INIT_RESPONSE
+            string "Initial response to IoT Command"
+            default "RECEIVED"
+            help
+                The initial response of the http server endpoint to an incoming IoT Device command
+    endmenu
 endmenu
 
 menu "FIWARE Task Configuration"
