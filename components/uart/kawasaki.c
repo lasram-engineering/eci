@@ -152,6 +152,7 @@ esp_err_t kawasaki_read_transmission(uart_port_t port, char *buffer, const int b
  *  ESP_OK if success,
  *  ESP_INVALID_RESPONSE if a response was invalid
  *  ESP_ERR_NOT_FINISHED if there was an ENQ collision (check uart_response)
+ *  ESP_ERR_TIMEOUT if a timeout has occurred
  *  ESP_FAIL if the transmission has failed
  */
 esp_err_t kawasaki_write_transmission(uart_port_t port, const char *payload)

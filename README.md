@@ -11,3 +11,14 @@ The individual components can be seen in the following image:
 ## Software logic
 
 ![Logic](./docs/tasks.svg)
+
+## Communication
+
+### Kawasaki Controller
+
+Commands from the controller:
+- MOTOR
+- MODE
+
+Commands to the controller:
+- PROGRAM

@@ -12,7 +12,6 @@ typedef struct
 
 typedef struct
 {
-    bool is_error;
     char payload[CONFIG_ITC_UART_MESSAGE_SIZE];
 } itc_uart_message_t;
 

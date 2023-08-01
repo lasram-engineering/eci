@@ -125,8 +125,32 @@ esp_err_t process_incoming_messages()
     if (ret == pdFALSE)
         return ESP_ERR_NOT_FOUND;
 
-    // check if the incoming message is an error message
-    kawasaki_write_transmission(uart_robot, uart_incoming_message.payload);
+    ESP_LOGI(TAG, "Sending message to robot: %s", uart_incoming_message.payload);
 
-    return ESP_OK;
+    // check if the incoming message is an error message
+    ret = kawasaki_write_transmission(uart_robot, uart_incoming_message.payload);
+
+    switch (ret)
+    {
+    case ESP_FAIL:
+        ESP_LOGW(TAG, "Transmission failed: %s", uart_incoming_message.payload);
+        break;
+
+    case ESP_ERR_INVALID_RESPONSE:
+        ESP_LOGW(TAG, "Invalid response to: %s", uart_incoming_message.payload);
+        break;
+
+    case ESP_ERR_NOT_FINISHED:
+        ESP_LOGW(TAG, "Possible ENQ collision during sending %s", uart_incoming_message.payload);
+        break;
+
+    case ESP_ERR_TIMEOUT:
+        ESP_LOGW(TAG, "Message timed out: %s", uart_incoming_message.payload);
+        break;
+
+    default:
+        break;
+    }
+
+    return ret;
 }

@@ -68,9 +68,9 @@ esp_err_t process_payload(char *payload)
         // the next token has to be the station name
         token = strtok(NULL, "|");
 
-        if (strlen(token) >= CONFIG_FIWARE_TASK_MEASUREMENT_SIZE)
+        if (strlen(token) >= CONFIG_ITC_IOTA_MEASUREMENT_MESSAGE_SIZE)
         {
-            ESP_LOGE(TAG, "Token (%d) is larger than max measurement length of %d", strlen(token), CONFIG_FIWARE_TASK_MEASUREMENT_SIZE);
+            ESP_LOGE(TAG, "Token (%d) is larger than max measurement length of %d", strlen(token), CONFIG_ITC_IOTA_MEASUREMENT_MESSAGE_SIZE);
             return ESP_ERR_INVALID_ARG;
         }
 
@@ -78,7 +78,7 @@ esp_err_t process_payload(char *payload)
 
 #ifdef CONFIG_FIWARE_TASK_ENABLE
 
-        char measurement[CONFIG_FIWARE_TASK_MEASUREMENT_SIZE];
+        char measurement[CONFIG_ITC_IOTA_MEASUREMENT_MESSAGE_SIZE];
 
         sprintf(measurement, "s|%s", token);
 

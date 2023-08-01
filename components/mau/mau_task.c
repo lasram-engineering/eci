@@ -66,8 +66,6 @@ void mau_task(void *arg)
 
         ESP_LOGI(TAG, "Incoming message: %s", mau_incoming_message.payload);
 
-        uart_message.is_error = false;
-
         // send the message to the MAU
         ret = uart_write_bytes(uart_num, mau_incoming_message.payload, strlen(mau_incoming_message.payload));
 

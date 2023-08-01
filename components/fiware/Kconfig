@@ -81,20 +81,6 @@ menu "FIWARE Task Configuration"
         help
             The priority of the task
 
-    config FIWARE_TASK_MEASUREMENT_QUEUE_SIZE
-        int "Task measurement queue size"
-        depends on FIWARE_TASK_ENABLE
-        default 10
-        help
-            The amount of measurements that can be queued to be sent to the IoT Agent
-    
-    config FIWARE_TASK_MEASUREMENT_SIZE
-        int "Measurement length"
-        depends on FIWARE_TASK_ENABLE
-        default 255
-        help
-            The length of the payload that can be sent to the IoT Agent as a measurement
-
     config FIWARE_TASK_MEASUREMENT_TIMEOUT
         int "Measurement timeout"
         depends on FIWARE_TASK_ENABLE
