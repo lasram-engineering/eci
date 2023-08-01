@@ -1,4 +1,4 @@
-set(COMPONENT_REQUIRES)
+set(COMPONENT_REQUIRES "fiware")
 
 if(CONFIG_FIWARE_TASK_ENABLE)
 set(COMPONENT_SRCS "task_intercom.c")

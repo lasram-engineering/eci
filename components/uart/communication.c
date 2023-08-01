@@ -1,7 +1,6 @@
 #include "communication.h"
 
 #include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
 #include <freertos/queue.h>
 #include <string.h>
 
@@ -14,6 +13,8 @@ static const char *TAG = "UART PAYLOAD";
 static const char *KW_MOTOR = "MOTOR";
 static const char *KW_START = "START";
 static const char *KW_END = "END";
+
+itc_mau_message_t mau_message;
 
 /*
 * UART payload syntax
@@ -36,18 +37,21 @@ First tokens can be MOTOR, START, END
  *          ESP_FAIL if the mau task was busy
  *          ESP_ERR_INVALID_ARG if the payload was invalid
  */
-esp_err_t process_payload(char *payload, TaskHandle_t mau_task_handle)
+esp_err_t process_payload(char *payload)
 {
+    int ret;
+
     // if the payload starts with "MOTOR" then send it forward to the MAU
     if (strncmp(payload, KW_MOTOR, strlen(KW_MOTOR)) == 0)
     {
         // copy the payload into the message
-        set_recv(payload);
+        strcpy(mau_message.payload, payload);
 
-        configASSERT(mau_task_handle != NULL);
+        // send the payload to the queue
+        ret = xQueueSend(task_intercom_mau_queue, &payload, 0);
 
-        // else notify the task that a new message is read
-        xTaskNotifyGive(mau_task_handle);
+        if (ret == errQUEUE_FULL)
+            return ESP_FAIL;
 
         return ESP_OK;
     }
@@ -79,7 +83,7 @@ esp_err_t process_payload(char *payload, TaskHandle_t mau_task_handle)
         sprintf(measurement, "s|%s", token);
 
         // add the measurement to the queue
-        xQueueSend(fiware_iota_measurement_queue, measurement, 0);
+        xQueueSend(task_intercom_fiware_measurement_queue, measurement, 0);
 #endif
 
         return ESP_OK;

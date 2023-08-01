@@ -3,6 +3,7 @@
 #include "mau_task.h"
 #include "uart_task.h"
 #include "fiware_task.h"
+#include "task_intercom.h"
 
 #ifndef MIN
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
@@ -20,6 +21,9 @@ static TaskHandle_t mau_task_handle;
 
 void initialize_tasks()
 {
+    // create the itc queues
+    ESP_ERROR_CHECK(task_intercom_init());
+
     xTaskCreate(mau_task, "mau_task", 4096, NULL, MIN(CONFIG_MAU_TASK_PRIO, configMAX_PRIORITIES - 1), &mau_task_handle);
 
 #ifdef CONFIG_UART_TASK_ENABLE

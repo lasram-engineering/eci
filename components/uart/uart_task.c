@@ -69,11 +69,7 @@ void uart_task(void *arg)
 
         if (ret == ESP_ERR_TIMEOUT)
         {
-            // check the error
-            process_error();
-
-            // check the send buffer
-            process_send();
+            process_incoming_messages();
 
             continue;
         }
@@ -84,8 +80,10 @@ void uart_task(void *arg)
             // process the incoming message
             ESP_LOGI(TAG, "Incoming message: %s", input_buffer);
 
-            // check if the recv buffer is empty (MAU not busy)
-            if (!is_empty_recv())
+            // process and try to send the message to the mau
+            ret = process_payload(input_buffer);
+
+            if (ret == ESP_FAIL)
             {
                 // respond with BUSY message
                 ret = kawasaki_write_transmission(uart_robot, "BUSY");
@@ -98,16 +96,6 @@ void uart_task(void *arg)
 
                 continue;
             }
-
-            // dereference the pointer
-            ret = process_payload(input_buffer, *(TaskHandle_t *)arg);
-
-            if (ret == ESP_FAIL)
-            {
-                ESP_LOGE(TAG, "Payload parsing failed");
-                continue;
-            }
-
             if (ret == ESP_ERR_INVALID_ARG)
             {
                 ESP_LOGE(TAG, "Invalid argument");
@@ -123,59 +111,22 @@ void uart_task(void *arg)
     }
 }
 
-char error[ERROR_BUF_LEN];
-char send[SEND_BUF_LEN];
+itc_uart_message_t uart_incoming_message;
 
 /**
- * @brief Processes the error message from the MAU task
+ * @brief Processes incoming messages from the UART queue
  *
  */
-void process_error()
+esp_err_t process_incoming_messages()
 {
-    if (is_empty_error())
-        return;
+    int ret = xQueueReceive(task_intercom_uart_queue, &uart_incoming_message, 0);
 
-    get_error(error);
+    // return if there is no message in the queue
+    if (ret == pdFALSE)
+        return ESP_ERR_NOT_FOUND;
 
-    ESP_LOGI(TAG, "MAU error: %s", error);
+    // check if the incoming message is an error message
+    kawasaki_write_transmission(uart_robot, uart_incoming_message.payload);
 
-    // send the error to the robot controller
-    // error message is: MAU ERROR:
-    char error_msg[10 + ERROR_BUF_LEN];
-
-    sprintf(error_msg, "MAU ERROR:%s", error);
-
-    esp_err_t ret = kawasaki_write_transmission(uart_robot, error_msg);
-
-    if (ret != ESP_OK)
-    {
-        const char *error = esp_err_to_name(ret);
-        ESP_LOGE(TAG, "Unable to send mau error message: %d -> %s", ret, error);
-    }
-
-    set_error("");
-}
-
-/**
- * @brief Porcesses the send buffer from the MAU task
- *
- */
-void process_send()
-{
-    if (is_empty_send())
-        return;
-
-    get_send(send);
-
-    ESP_LOGI(TAG, "Sending message from MAU to Robot: %s", send);
-
-    esp_err_t ret = kawasaki_write_transmission(uart_robot, send);
-
-    if (ret != ESP_OK)
-    {
-        const char *error = esp_err_to_name(ret);
-        ESP_LOGE(TAG, "Unable to mau send buffer: %d -> %s", ret, error);
-    }
-
-    set_send("");
+    return ESP_OK;
 }

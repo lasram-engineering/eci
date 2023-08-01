@@ -3,32 +3,35 @@
 #include <esp_log.h>
 
 #include "iot_agent.h"
+#include "task_intercom.h"
 
 static const char *TAG = "FIWARE Task";
 
-QueueHandle_t fiware_iota_measurement_queue = NULL;
+static itc_iota_measurement_t fiware_incoming_measurement;
+static fiware_iota_command_t fiware_incoming_command;
 
 void fiware_task()
 {
-    // allocate the measurement queue
-    fiware_iota_measurement_queue = xQueueCreate(CONFIG_FIWARE_TASK_MEASUREMENT_QUEUE_SIZE, sizeof(char) * CONFIG_FIWARE_TASK_MEASUREMENT_SIZE);
-
-    // if the queue cannot be allocated, abort the program
-    if (fiware_iota_measurement_queue == NULL)
-    {
-        ESP_LOGE(TAG, "Cannot allocate measurement queue");
-        abort();
-    }
-
-    char payload[CONFIG_FIWARE_TASK_MEASUREMENT_SIZE];
+    int ret;
 
     /* LOOP */
     while (1)
     {
         // block until a measurement payload comes in
-        xQueueReceive(fiware_iota_measurement_queue, &payload, portMAX_DELAY);
+        ret = xQueueReceive(task_intercom_fiware_measurement_queue, &fiware_incoming_measurement, pdMS_TO_TICKS(CONFIG_FIWARE_TASK_MEASUREMENT_TIMEOUT));
 
-        fiware_iota_make_measurement(payload);
+        // check if the queue had items
+        if (ret == pdTRUE)
+        {
+            fiware_iota_make_measurement(fiware_incoming_measurement.payload);
+            continue;
+        }
+
+        // if there was a timeout, check the commands
+        ret = xQueueReceive(task_intercom_fiware_command_queue, &fiware_incoming_command, 0);
+
+        if (ret == pdFALSE)
+            continue;
 
         // TODO implement additional task logic from docs
     }

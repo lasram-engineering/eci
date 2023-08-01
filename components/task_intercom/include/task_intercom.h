@@ -1,26 +1,33 @@
 #pragma once
 
 #include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
+#include <freertos/queue.h>
 
-#define SEND_BUF_LEN 32
-#define RECV_BUF_LEN 32
-#define ERROR_BUF_LEN 32
+#include "iot_agent.h"
 
-#define COMMAND_BUF_LEN 255
+typedef struct
+{
+    char payload[CONFIG_ITC_MAU_MESSAGE_SIZE];
+} itc_mau_message_t;
 
-void get_recv(char *buffer);
-void set_recv(const char *value);
-bool is_empty_recv();
+typedef struct
+{
+    bool is_error;
+    char payload[CONFIG_ITC_UART_MESSAGE_SIZE];
+} itc_uart_message_t;
 
-void get_send(char *buffer);
-void set_send(const char *value);
-bool is_empty_send();
+typedef struct
+{
+    char payload[CONFIG_ITC_IOTA_MEASUREMENT_MESSAGE_SIZE];
+} itc_iota_measurement_t;
 
-void get_error(char *buffer);
-void set_error(const char *value);
-bool is_empty_error();
+/** Queue to store the messages to the Kawasaki controller */
+extern QueueHandle_t task_intercom_uart_queue;
+/** Queue to store the messages to the MAU */
+extern QueueHandle_t task_intercom_mau_queue;
+/** Queue to store the measurements to the FIWARE IoT Agent */
+extern QueueHandle_t task_intercom_fiware_measurement_queue;
 
-void get_incoming_command(char *buffer);
-void set_incoming_command(const char *value);
-bool is_empty_incoming_command();
+extern QueueHandle_t task_intercom_fiware_command_queue;
+
+esp_err_t task_intercom_init();

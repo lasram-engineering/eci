@@ -94,4 +94,11 @@ menu "FIWARE Task Configuration"
         default 255
         help
             The length of the payload that can be sent to the IoT Agent as a measurement
+
+    config FIWARE_TASK_MEASUREMENT_TIMEOUT
+        int "Measurement timeout"
+        depends on FIWARE_TASK_ENABLE
+        default 1000
+        help
+            Specifies the wait time after which if no measurement is incoming, a command will be processed
 endmenu

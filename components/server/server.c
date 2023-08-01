@@ -1,5 +1,8 @@
 #include "server.h"
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
+
 #include <esp_log.h>
 #include <esp_http_server.h>
 
@@ -47,6 +50,7 @@ esp_err_t get_handler(httpd_req_t *request)
 }
 
 static char payload[PAYLOAD_LENGTH];
+static fiware_iota_command_t incoming_command;
 
 /**
  * @brief Handles incoming POST requests from the FIWARE IoT Agent
@@ -79,23 +83,39 @@ esp_err_t api_post_handler(httpd_req_t *request)
         return ESP_FAIL;
     }
 
-    ESP_LOGI(TAG, "Got payload: %s", payload);
+    ESP_LOGI(TAG, "Got command: %s", payload);
 
     // parse the payload
-    // TODO parse the payload
+    ret = fiware_iota_parse_command(payload, &incoming_command);
 
-    // check if the incoming command buffer is not empty
-    if (!is_empty_incoming_command())
+    if (ret == ESP_FAIL)
     {
-        ESP_LOGI(TAG, "Incoming command buffer not empty, returning error...");
-        httpd_resp_send_500(request);
-        return ESP_FAIL;
+        httpd_resp_send_err(request, HTTPD_400_BAD_REQUEST, "Could not parse command");
+        return ESP_OK;
     }
 
-    // copy the payload into the incoming command buffer
-    set_incoming_command(payload);
+    if (ret == ESP_ERR_INVALID_ARG)
+    {
+        httpd_resp_send_err(request, HTTPD_400_BAD_REQUEST, "Invalid arguments");
+        return ESP_OK;
+    }
 
-    httpd_resp_send(request, CONFIG_IOT_AGENT_COMMAND_INIT_RESPONSE, HTTPD_RESP_USE_STRLEN);
+    if (ret == ESP_ERR_INVALID_SIZE)
+    {
+        httpd_resp_send_err(request, HTTPD_400_BAD_REQUEST, "Command name or payload too large");
+        return ESP_OK;
+    }
+
+    ESP_LOGI(TAG, "Command was valid");
+
+    // send the command to the fiware task
+    ret = xQueueSend(task_intercom_fiware_measurement_queue, &incoming_command, 0);
+
+    if (ret == pdTRUE)
+        httpd_resp_send(request, CONFIG_IOT_AGENT_COMMAND_INIT_RESPONSE, HTTPD_RESP_USE_STRLEN);
+
+    else
+        httpd_resp_send_err(request, HTTPD_400_BAD_REQUEST, "BUSY");
 
     return ESP_OK;
 }
