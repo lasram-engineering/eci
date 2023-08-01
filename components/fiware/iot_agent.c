@@ -153,3 +153,28 @@ esp_err_t fiware_iota_parse_command(char *raw_command, fiware_iota_command_t *co
 
     return ESP_OK;
 }
+
+esp_err_t fiware_iota_make_command_response(const char *command_name, const char *result, char *buffer, int buffer_len)
+{
+    // check if the buffer is long enough
+    // the +3 is for the @ and | and the trailing zero
+    if (strlen(CONFIG_IOT_AGENT_DEVICE_ID) + strlen(command_name) + strlen(result) + 3 >= buffer_len)
+        return ESP_FAIL;
+
+    // copy the device id
+    strcpy(buffer, CONFIG_IOT_AGENT_DEVICE_ID);
+
+    // copy the @ symbol
+    strcat(buffer, "@");
+
+    // copy the command name
+    strcat(buffer, command_name);
+
+    // copy the pipe symbol
+    strcat(buffer, "|");
+
+    // copy the buffer
+    strcat(buffer, result);
+
+    return ESP_OK;
+}

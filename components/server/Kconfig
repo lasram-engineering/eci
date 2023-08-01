@@ -1,0 +1,7 @@
+menu "HTTP Server"
+    config HTTP_SERVER_PAYLOAD_LEN
+        int "HTTP Server payload length"
+        default 255
+        help
+            The maximum length of the incoming payload for the server
+endmenu

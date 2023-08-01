@@ -11,3 +11,5 @@ typedef struct
 } fiware_iota_command_t;
 
 esp_err_t fiware_iota_parse_command(char *raw_command, fiware_iota_command_t *command);
+
+esp_err_t fiware_iota_make_command_response(const char *command_name, const char *result, char *buffer, int buffer_len);

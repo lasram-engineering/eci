@@ -11,8 +11,6 @@
 
 #define RESPONSE_BUFFER_LENGTH 2 * (15 + APP_STATE_LENGTH) + 1
 
-#define PAYLOAD_LENGTH 255
-
 static const char *TAG = "Server";
 
 static char response[RESPONSE_BUFFER_LENGTH];
@@ -49,7 +47,7 @@ esp_err_t get_handler(httpd_req_t *request)
     return ESP_OK;
 }
 
-static char payload[PAYLOAD_LENGTH];
+static char payload[CONFIG_HTTP_SERVER_PAYLOAD_LEN];
 static fiware_iota_command_t incoming_command;
 
 /**
@@ -61,9 +59,9 @@ static fiware_iota_command_t incoming_command;
 esp_err_t api_post_handler(httpd_req_t *request)
 {
 
-    if (sizeof(payload) < request->content_len)
+    if (CONFIG_HTTP_SERVER_PAYLOAD_LEN <= request->content_len)
     {
-        ESP_LOGI(TAG, "Incoming POST payload too large %d vs %d", PAYLOAD_LENGTH, request->content_len);
+        ESP_LOGI(TAG, "Incoming POST payload too large %d vs %d", CONFIG_HTTP_SERVER_PAYLOAD_LEN, request->content_len);
         // send back an error message
         httpd_resp_send_err(request, HTTPD_400_BAD_REQUEST, "Payload too large");
         return ESP_FAIL;
@@ -109,13 +107,21 @@ esp_err_t api_post_handler(httpd_req_t *request)
     ESP_LOGI(TAG, "Command was valid");
 
     // send the command to the fiware task
-    ret = xQueueSend(task_intercom_fiware_measurement_queue, &incoming_command, 0);
+    ret = xQueueSend(task_intercom_fiware_command_queue, &incoming_command, 0);
+    httpd_resp_set_type(request, "text/plain");
 
     if (ret == pdTRUE)
-        httpd_resp_send(request, CONFIG_IOT_AGENT_COMMAND_INIT_RESPONSE, HTTPD_RESP_USE_STRLEN);
+    {
+        fiware_iota_make_command_response(incoming_command.command_name, CONFIG_IOT_AGENT_COMMAND_INIT_RESPONSE, payload, CONFIG_HTTP_SERVER_PAYLOAD_LEN);
+        httpd_resp_send(request, payload, HTTPD_RESP_USE_STRLEN);
+    }
 
     else
-        httpd_resp_send_err(request, HTTPD_400_BAD_REQUEST, "BUSY");
+    {
+
+        fiware_iota_make_command_response(incoming_command.command_name, "BUSY", payload, CONFIG_HTTP_SERVER_PAYLOAD_LEN);
+        httpd_resp_send_err(request, HTTPD_400_BAD_REQUEST, payload);
+    }
 
     return ESP_OK;
 }
