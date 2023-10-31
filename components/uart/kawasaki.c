@@ -115,7 +115,7 @@ esp_err_t kawasaki_read_transmission(uart_port_t port, char *buffer, const int b
         // the connection has been closed
         if (input == UNICODE_EOT)
         {
-            return ESP_FAIL;
+            return ESP_OK;
         }
     }
 

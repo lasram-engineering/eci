@@ -58,6 +58,8 @@ static fiware_iota_command_t incoming_command;
  */
 esp_err_t api_post_handler(httpd_req_t *request)
 {
+    // reset payload
+    payload[0] = '\0';
 
     if (CONFIG_HTTP_SERVER_PAYLOAD_LEN <= request->content_len)
     {

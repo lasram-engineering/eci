@@ -79,9 +79,10 @@ void mau_task(void *arg)
             ESP_LOGW(TAG, "An error occurred while reading from MAU: %d -> %s", ret, error_msg);
 
             // check if the error message fits the buffer
-            ESP_ERROR_CHECK(strlen(error_msg) <= CONFIG_ITC_UART_MESSAGE_SIZE);
+            if (strlen(error_msg) >= CONFIG_ITC_UART_MESSAGE_SIZE)
+                abort();
 
-            strcpy(uart_message.payload, error_msg);
+            sprintf(uart_message.payload, "%s|%s", mau_incoming_message.payload, error_msg);
         }
         else
         {

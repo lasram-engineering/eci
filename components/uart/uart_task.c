@@ -65,6 +65,9 @@ void uart_task(void *arg)
     /* LOOP */
     while (1)
     {
+        // clear the input buffer
+        input_buffer[0] = '\0';
+
         ret = kawasaki_read_transmission(uart_robot, input_buffer, UART_BUF_LEN, pdMS_TO_TICKS(UART_TIMEOUT_MS));
 
         if (ret == ESP_ERR_TIMEOUT)
@@ -76,6 +79,11 @@ void uart_task(void *arg)
 
         if (ret == ESP_OK)
         {
+
+            // check if it was not an empty message
+            if (strlen(input_buffer) == 0)
+                continue;
+
             // no error has occurred
             // process the incoming message
             ESP_LOGI(TAG, "Incoming message: %s", input_buffer);
@@ -86,7 +94,7 @@ void uart_task(void *arg)
             if (ret == ESP_FAIL)
             {
                 // respond with BUSY message
-                ret = kawasaki_write_transmission(uart_robot, "BUSY");
+                ret = kawasaki_write_transmission(uart_robot, "BUSY"); // TODO refine this
 
                 if (ret != ESP_OK)
                 {

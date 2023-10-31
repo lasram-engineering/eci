@@ -48,7 +48,7 @@ esp_err_t process_payload(char *payload)
         strcpy(mau_message.payload, payload);
 
         // send the payload to the queue
-        ret = xQueueSend(task_intercom_mau_queue, &payload, 0);
+        ret = xQueueSend(task_intercom_mau_queue, &mau_message, 0);
 
         if (ret == errQUEUE_FULL)
             return ESP_FAIL;

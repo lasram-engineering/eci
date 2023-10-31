@@ -22,3 +22,8 @@ Commands from the controller:
 
 Commands to the controller:
 - PROGRAM
+
+### Measurement and Actuation Unit
+
+Commands to the MAU:
+- VOLTAGE
