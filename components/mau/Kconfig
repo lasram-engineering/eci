@@ -1,0 +1,7 @@
+menu "MAU Task Configuration"
+    config MAU_TASK_PRIO
+        int "Task priority"
+        default 15
+        help
+            "Priority of the task"
+endmenu

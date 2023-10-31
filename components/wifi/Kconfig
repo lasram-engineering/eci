@@ -1,0 +1,31 @@
+menu "WiFi Connection"
+    config WIFI_ENABLED
+        bool "WiFi enabled"
+        default true
+        
+    config WIFI_HOST
+        depends on WIFI_ENABLED
+        string "WiFi Hostname"
+        default "EmbeddedDeviceInterface"
+        help 
+            The WiFi hostname of the device
+            
+    config WIFI_SSID
+        depends on WIFI_ENABLED
+        string "WiFi SSID"
+        help
+            The SSID of the WiFi network to connect to
+
+    config WIFI_PASS
+        depends on WIFI_ENABLED
+        string "WiFi Password"
+        help
+            The password of the WiFi network
+
+    config WIFI_RETRY_ERROR_THRESHOLD
+        depends on WIFI_ENABLED
+        int "WiFi connection retry error threshold"
+        default 5
+        help
+            The number of connection retries before an error is thrown
+endmenu

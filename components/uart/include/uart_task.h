@@ -20,6 +20,4 @@
 
 void uart_task(void *arg);
 
-void process_error();
-
-void process_send();
+esp_err_t process_incoming_messages();

@@ -1,0 +1,90 @@
+menu "FIWARE IoT Agent Configuration"
+    depends on FIWARE_TASK_ENABLE
+
+    config IOT_AGENT_HOST
+        string "IoT Agent Host"
+        default "192.168.1.100"
+        help 
+            The host (IP) of the FIWARE IoT Agent
+    
+    config IOT_AGENT_NORTH_PORT
+        string "IoT Agent North Port"
+        default "4041"
+        help 
+            The north port of the FIWARE IoT Agent
+    
+    config IOT_AGENT_SOUTH_PORT
+        string "IoT Agent South Port"
+        default "7896"
+        help
+            The south port of the FIWARE IoT Agent
+    
+    config IOT_AGENT_RESOURCE
+        string "IoT Agent Resource identifier"
+        default "/iot/d"
+        help 
+            The resource identifier of the FIWARE IoT Agent
+    
+    config IOT_AGENT_APIKEY
+        string "IoT Agent API key"
+        default "openiot"
+        help 
+            The API key of the IoT Agent
+    
+    config IOT_AGENT_DEVICE_ID
+        string "IoT Agent Device ID"
+        default "edi001"
+        help 
+            The ID of this device in the IoT Agent
+            
+    config IOT_DEVICE_ENDPOINT
+        string "IoT Device Endpoint"
+        default "/api"
+        help
+            The endpoint on which the HTTP server listens to incoming commands
+                    
+    menu "COMMANDS"
+        config IOT_AGENT_COMMAND_STRICT
+            bool "Iot Agent strict command checking"
+            help
+                If the flag is set an incoming IoT Agent command will only be executed if the device ID matches
+
+        config IOT_AGENT_COMMAND_NAME_LEN
+            int "IoT Agent UltraLight command name length"
+            default 32
+            help
+                The length of the buffer that stores the incoming command name
+
+        config IOT_AGENT_COMMAND_PAYLOAD_LEN
+            int "IoT Agent UltraLight command payload length"
+            default 255
+            help
+                The length of the buffer that stores the incoming command payload
+                        
+        config IOT_AGENT_COMMAND_INIT_RESPONSE
+            string "Initial response to IoT Command"
+            default "RECEIVED"
+            help
+                The initial response of the http server endpoint to an incoming IoT Device command
+    endmenu
+endmenu
+
+menu "FIWARE Task Configuration"
+    config FIWARE_TASK_ENABLE
+        bool "Enable FIWARE task"
+        help
+            Enable or disable the communication task with the FIWARE IoT Platform
+
+    config FIWARE_TASK_PRIO
+        int "Task priority"
+        default 10
+        help
+            The priority of the task
+
+    config FIWARE_TASK_MEASUREMENT_TIMEOUT
+        int "Measurement timeout"
+        depends on FIWARE_TASK_ENABLE
+        default 1000
+        help
+            Specifies the wait time after which if no measurement is incoming, a command will be processed
+endmenu
