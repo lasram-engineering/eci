@@ -51,7 +51,7 @@ void fiware_task()
         // check if the queue had items
         if (ret == pdTRUE)
         {
-            fiware_iota_make_measurement(fiware_incoming_measurement.payload);
+            fiware_iota_make_measurement(fiware_incoming_measurement.payload, &fiware_access_token, NULL);
             continue;
         }
 
