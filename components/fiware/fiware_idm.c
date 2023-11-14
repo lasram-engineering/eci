@@ -1,22 +1,23 @@
 #include "fiware_idm.h"
 
-#include <esp_http_client.h>
 #include <esp_log.h>
 
 #include <cJSON.h>
 
 #include "app_state.h"
 
-#define FIWARE_IDM_URI "http://" CONFIG_FIWARE_HOST ":" CONFIG_FIWARE_IDM_PORT
+#define FIWARE_IDM_URI "http://" CONFIG_FIWARE_HOST
 
-#define FIWARE_IDM_TOKEN_ROUTE "/oauth2/token"
+#define FIWARE_IDM_ACCESS_TOKEN_ROUTE "/oauth2/token"
+
+#define FIWARE_IDM_AUTH_TOKEN_PATH "/v1/auth/tokens"
 
 #define FIWARE_IDM_GRANT_TYPE_PASSWORD "password"
 #define FIWARE_IDM_GRANT_TYPE_REFRESH "refresh_token"
 
 static const char *TAG = "FIWARE IdM";
 
-esp_err_t http_event_get_handler(esp_http_client_event_handle_t event)
+esp_err_t idm_access_token_event_handler(esp_http_client_event_handle_t event)
 {
     switch (event->event_id)
     {
@@ -53,8 +54,8 @@ esp_err_t http_event_get_handler(esp_http_client_event_handle_t event)
         time(&now); // get the seconds since 1970. 01. 01.
 
         // load the attributes into the token
-        snprintf(token->token, FIWARE_IDM_TOKEN_LEN, "%s", access_token->valuestring);
-        snprintf(token->refresh_token, FIWARE_IDM_TOKEN_LEN, "%s", refresh_token->valuestring);
+        strncpy(token->token, access_token->valuestring, FIWARE_IDM_ACCESS_TOKEN_LEN);
+        strncpy(token->refresh_token, refresh_token->valuestring, FIWARE_IDM_ACCESS_TOKEN_LEN);
         token->expires_in = now + expires_in->valueint;
 
         ESP_LOGI(
@@ -75,10 +76,12 @@ esp_err_t http_event_get_handler(esp_http_client_event_handle_t event)
     return ESP_OK;
 }
 
-static const esp_http_client_config_t request_token_config = {
-    .url = FIWARE_IDM_URI FIWARE_IDM_TOKEN_ROUTE,
+static const esp_http_client_config_t request_access_token_config = {
+    .host = CONFIG_FIWARE_HOST,
+    .port = CONFIG_FIWARE_IDM_PORT,
+    .path = FIWARE_IDM_ACCESS_TOKEN_ROUTE,
     .method = HTTP_METHOD_POST,
-    .event_handler = http_event_get_handler,
+    .event_handler = idm_access_token_event_handler,
     .username = CONFIG_FIWARE_IDM_APP_ID,
     .password = CONFIG_FIWARE_IDM_APP_SECRET,
     .auth_type = HTTP_AUTH_TYPE_BASIC,
@@ -87,7 +90,7 @@ static const esp_http_client_config_t request_token_config = {
 
 esp_err_t fiware_idm_request_access_token_grant_type(FiwareAccessToken_t *token, FiwareAccessTokenGrantType grant_type)
 {
-    esp_http_client_handle_t client = esp_http_client_init(&request_token_config);
+    esp_http_client_handle_t client = esp_http_client_init(&request_access_token_config);
 
     // pass the token to be available during the callbacks
     esp_http_client_set_user_data(client, token);
@@ -164,15 +167,8 @@ esp_err_t fiware_idm_renew_access_token(FiwareAccessToken_t *token)
     return fiware_idm_request_access_token_grant_type(token, REFRESH);
 }
 
-esp_err_t fiware_idm_attach_auth_data_to_request(FiwareAccessToken_t *token, esp_http_client_t client)
+esp_err_t fiware_idm_attach_auth_data_to_request(FiwareAccessToken_t *token, esp_http_client_handle_t client)
 {
-    // set the auth type to basic
-    esp_http_client_set_authtype(client, HTTP_AUTH_TYPE_BASIC);
-    // add the username
-    esp_http_client_set_username(client, CONFIG_FIWARE_IDM_APP_ID);
-    // add the password
-    esp_http_client_set_password(client, CONFIG_FIWARE_IDM_APP_SECRET);
-
     // set the X-Auth-Token header value to the tokens value
     esp_http_client_set_header(client, FIWARE_IDM_HEADER_AUTH_TOKEN, token->token);
 
