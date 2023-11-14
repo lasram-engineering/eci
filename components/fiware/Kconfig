@@ -11,15 +11,9 @@ endmenu
 menu "FIWARE IoT Agent Configuration"
     depends on FIWARE_TASK_ENABLE
     
-    config IOT_AGENT_NORTH_PORT
-        string "IoT Agent North Port"
-        default "4041"
-        help 
-            The north port of the FIWARE IoT Agent
-    
     config IOT_AGENT_SOUTH_PORT
-        string "IoT Agent South Port"
-        default "7896"
+        int "IoT Agent South Port"
+        default 7896
         help
             The south port of the FIWARE IoT Agent
     
@@ -77,8 +71,8 @@ menu "FIWARE IdM Configuration"
     depends on FIWARE_TASK_ENABLE
 
     config FIWARE_IDM_PORT
-        string "FIWARE IdM port"
-        default "8088"
+        int "FIWARE IdM port"
+        default 8088
         help
             The port of the FIWARE KeyRock IdM
 

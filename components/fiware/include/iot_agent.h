@@ -2,7 +2,9 @@
 
 #include <esp_err.h>
 
-esp_err_t fiware_iota_make_measurement(const char *payload);
+#include "fiware_idm.h"
+
+esp_err_t fiware_iota_make_measurement(const char *payload, FiwareAccessToken_t *token, int *status_code);
 
 typedef struct
 {

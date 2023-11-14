@@ -7,18 +7,41 @@
 
 #include "app_state.h"
 
-/** URL for FIWARE IoT Agent measurements */
-#define FIWARE_IOTA_MEAS_URL "http://" CONFIG_IOT_AGENT_HOST ":" CONFIG_IOT_AGENT_SOUTH_PORT CONFIG_IOT_AGENT_RESOURCE
-
 #define FIWARE_IOTA_MEAS_QUERY "?i=" CONFIG_IOT_AGENT_DEVICE_ID "&k=" CONFIG_IOT_AGENT_APIKEY
 
 #define RESPONSE_BUF_LEN 255
 
 static const char *TAG = "IoT Agent";
 
+esp_err_t fiware_iota_http_event_handler(esp_http_client_event_handle_t event)
+{
+    switch (event->event_id)
+    {
+    case HTTP_EVENT_ON_DATA:
+        ESP_LOGI(TAG, "Incoming data: %s", (char *)event->data);
+
+        // char *data_buffer = event->user_data;
+
+        // int content_len = esp_http_client_get_content_length(event->client);
+
+        // data_buffer = malloc(sizeof(char) * (content_len + 1));
+
+        // strcpy(data_buffer, event->data);
+        break;
+
+    default:
+        break;
+    }
+
+    return ESP_OK;
+}
+
 static const esp_http_client_config_t measurement_config = {
-    .url = FIWARE_IOTA_MEAS_URL FIWARE_IOTA_MEAS_QUERY,
+    .host = CONFIG_FIWARE_HOST,
+    .port = CONFIG_IOT_AGENT_SOUTH_PORT,
+    .path = CONFIG_IOT_AGENT_RESOURCE FIWARE_IOTA_MEAS_QUERY,
     .method = HTTP_METHOD_POST,
+    .event_handler = fiware_iota_http_event_handler,
     .cert_pem = NULL,
 };
 
@@ -30,7 +53,7 @@ static const esp_http_client_config_t measurement_config = {
  *                      ESP_ERR_INVALID_STATE if wifi connection is not available
  */
 esp_err_t
-fiware_iota_make_measurement(const char *payload)
+fiware_iota_make_measurement(const char *payload, FiwareAccessToken_t *token, int *status_code)
 {
     // check if wifi is not connected
     if (!app_state_get(STATE_TYPE_INTERNAL) & APP_STATE_INTERNAL_WIFI_CONNECTED)
@@ -41,6 +64,19 @@ fiware_iota_make_measurement(const char *payload)
     // create a new client with the request
     esp_http_client_handle_t client = esp_http_client_init(&measurement_config);
 
+    // if the token is not null, attach the auth values to the request
+    if (token != NULL)
+    {
+        // check if the token is expired
+        if (fiware_idm_check_is_token_expired(token))
+        {
+            ESP_LOGW(TAG, "FIWARE Auth token expired, renewing token...");
+            fiware_idm_renew_access_token(token);
+        }
+
+        fiware_idm_attach_auth_data_to_request(token, client);
+    }
+
     // put the payload in the post field
     esp_http_client_set_post_field(client, payload, strlen(payload));
 
@@ -48,32 +84,43 @@ fiware_iota_make_measurement(const char *payload)
     esp_http_client_set_header(client, "Content-Type", "text/plain");
 
     // process the request itself
-    esp_http_client_perform(client);
+    int ret = esp_http_client_perform(client);
 
-    // get the status code of the event
-    int status_code = esp_http_client_get_status_code(client);
-
-    if (status_code < 400)
+    if (ret != ESP_OK)
     {
-        return ESP_OK;
+        ESP_LOGE(TAG, "Error sending request.");
+        esp_http_client_cleanup(client);
+        return ret;
     }
 
-    if (status_code == 404)
+    // get the status code of the event
+    ret = esp_http_client_get_status_code(client);
+
+    else if (ret == 404)
     {
         ESP_LOGW(TAG, "Could not find device with apikey '" CONFIG_IOT_AGENT_APIKEY "' maybe service group is not registered?");
     }
-
-    else if (status_code == 422)
+    else if (ret == 422)
     {
         ESP_LOGW(TAG, "Could not find device with id '" CONFIG_IOT_AGENT_DEVICE_ID "' maybe device is not registered or invalid poperty?");
     }
-
-    else
+    else if (ret == 401)
     {
-        ESP_LOGW(TAG, "Unexpected status from server: %d", status_code);
+        ESP_LOGW(TAG, "Unauthorized.");
+    }
+    else if (ret >= 300)
+    {
+        ESP_LOGW(TAG, "Unexpected status from server: %d", ret);
     }
 
-    return status_code;
+    if (status_code != NULL)
+    {
+        *status_code = ret;
+    }
+
+    esp_http_client_cleanup(client);
+
+    return ESP_OK;
 }
 
 /**
