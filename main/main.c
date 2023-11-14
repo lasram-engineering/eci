@@ -3,7 +3,7 @@
 #include "freertos/task.h"
 
 #include <nvs_flash.h>
-#include <esp_netif.h>
+#include <esp_netif_sntp.h>
 
 #include "server.h"
 #include "wifi.h"
@@ -20,6 +20,10 @@ void app_main(void)
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
+    // synchronize network time
+    esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
+    esp_netif_sntp_init(&config);
+
     // start tasks
     initialize_tasks();
 
@@ -27,6 +31,7 @@ void app_main(void)
     // blocking call
 #ifdef CONFIG_WIFI_ENABLED
     wifi_connect_to_station();
+
     // start http server
     server = start_http_server();
 #endif
