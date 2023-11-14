@@ -1,11 +1,15 @@
-menu "FIWARE IoT Agent Configuration"
+menu "General FIWARE Configuration"
     depends on FIWARE_TASK_ENABLE
 
-    config IOT_AGENT_HOST
-        string "IoT Agent Host"
-        default "192.168.1.100"
-        help 
-            The host (IP) of the FIWARE IoT Agent
+    config FIWARE_HOST
+        string "FIWARE Service Host"
+        default "192.168.152.90"
+        help
+            The host (IP) of the machine that hosts the FIWARE stack
+endmenu
+
+menu "FIWARE IoT Agent Configuration"
+    depends on FIWARE_TASK_ENABLE
     
     config IOT_AGENT_NORTH_PORT
         string "IoT Agent North Port"
@@ -57,7 +61,7 @@ menu "FIWARE IoT Agent Configuration"
 
         config IOT_AGENT_COMMAND_PAYLOAD_LEN
             int "IoT Agent UltraLight command payload length"
-            default 255
+            default 32
             help
                 The length of the buffer that stores the incoming command payload
                         
@@ -67,6 +71,40 @@ menu "FIWARE IoT Agent Configuration"
             help
                 The initial response of the http server endpoint to an incoming IoT Device command
     endmenu
+endmenu
+
+menu "FIWARE IdM Configuration"
+    depends on FIWARE_TASK_ENABLE
+
+    config FIWARE_IDM_PORT
+        string "FIWARE IdM port"
+        default "8088"
+        help
+            The port of the FIWARE KeyRock IdM
+
+    config FIWARE_IDM_APP_ID
+        string "FIWARE IdM Application ID"
+        default "47239baf-a484-4067-b22b-1cf0e7494e48"
+        help
+            The application (client) ID from KeyRock IdM
+
+    config FIWARE_IDM_APP_SECRET
+        string "FIWARE IdM Application secret"
+        default "8c7d6e2d-5984-4595-99ee-a7872c730d17"
+        help
+            The application (client) secret from KeyRock IdM
+
+    config FIWARE_IDM_USERNAME
+        string "FIWARE IdM IoT Sensor username"
+        default "iot_sensor_8ece83c7-3846-470a-90ed-52bc41c9661b"
+        help
+            The username of the IoT Sensor registered in KeyRock IdM
+
+    config FIWARE_IDM_PASSWORD
+        string "FIWARE IdM IoT Sensor password"
+        default "iot_sensor_d859d9aa-733b-43b5-a67e-895b7c01affe"
+        help
+            The password of the IoT Sensor registered in KeyRock IdM
 endmenu
 
 menu "FIWARE Task Configuration"
