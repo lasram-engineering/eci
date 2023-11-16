@@ -1,6 +1,7 @@
 #include "fiware_task.h"
 
 #include <string.h>
+#include <time.h>
 
 #include <esp_log.h>
 #include <esp_check.h>
@@ -40,6 +41,8 @@ void fiware_task()
         ESP_LOGE(TAG, "Unable to get access token");
 
     itc_message_t *incoming_measurement;
+    itc_message_t *fiware_command_out;
+    time_t now;
 
     /* LOOP */
     while (1)
@@ -55,31 +58,36 @@ void fiware_task()
                 incoming_measurement->response_static = "OK";
             else
                 incoming_measurement->response_static = "NO WIFI";
+
+            // send the command back to the UART task
+            xQueueSend(task_intercom_uart_queue, &fiware_command_out, portMAX_DELAY);
+
             continue;
         }
 
         // if there was a timeout, check the commands
-        ret = xQueuePeek(task_intercom_fiware_command_queue, &fiware_incoming_command, 0);
+        ret = xQueueReceive(task_intercom_fiware_command_queue, &fiware_incoming_command, 0);
 
         if (ret == pdFALSE)
             continue;
 
-        // // check for program update command
-        // if (strcmp(fiware_incoming_command.command_name, KW_PROGRAM_UPDATE) == 0)
-        // {
-        //     ESP_LOGI(TAG, "New porgam: %s", fiware_incoming_command.command_param);
+        // check for program update command
+        if (strcmp(fiware_incoming_command.command_name, KW_PROGRAM_UPDATE) == 0)
+        {
+            ESP_LOGI(TAG, "New progam: %s", fiware_incoming_command.command_param);
 
-        //     // load the program name into the message payload
-        //     snprintf(uart_message.payload, CONFIG_ITC_IOTA_MEASUREMENT_MESSAGE_SIZE, "PROGRAM|%s", fiware_incoming_command.command_param);
+            fiware_command_out = task_intercom_message_create();
+            task_intercom_message_init(fiware_command_out);
 
-        //     // send the message to the queue
-        //     ret = xQueueSend(task_intercom_uart_queue, &uart_message, 0);
+            // set the id based on the time
+            time(&now);
+            fiware_command_out->message_id = now;
 
-        //     if (ret == errQUEUE_FULL)
-        //         ESP_LOGE(TAG, "Unable to send to UART task, queue full");
+            // allocate and load the param into the response
+            asprintf(&fiware_command_out->response, "PROGRAM|%s", fiware_incoming_command.command_param);
 
-        //     // remove the item from the queue
-        //     xQueueReceive(task_intercom_fiware_command_queue, &fiware_incoming_command, 0);
-        // }
+            // send the response to the UART task (will wait forever)
+            xQueueSend(task_intercom_uart_queue, &fiware_command_out, portMAX_DELAY);
+        }
     }
 }
