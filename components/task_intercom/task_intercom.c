@@ -22,15 +22,15 @@ QueueHandle_t task_intercom_fiware_command_queue = NULL;
  */
 esp_err_t task_intercom_init()
 {
-    task_intercom_uart_queue = xQueueCreate(CONFIG_ITC_UART_QUEUE_SIZE, sizeof(itc_mau_message_t));
+    task_intercom_uart_queue = xQueueCreate(CONFIG_ITC_UART_QUEUE_SIZE, sizeof(itc_message_t));
 
     ESP_RETURN_ON_FALSE(task_intercom_uart_queue != NULL, ESP_FAIL, TAG, "Insufficient memory to allocate UART queue");
 
-    task_intercom_mau_queue = xQueueCreate(CONFIG_ITC_MAU_QUEUE_SIZE, sizeof(itc_mau_message_t));
+    task_intercom_mau_queue = xQueueCreate(CONFIG_ITC_MAU_QUEUE_SIZE, sizeof(itc_message_t));
 
     ESP_RETURN_ON_FALSE(task_intercom_mau_queue != NULL, ESP_FAIL, TAG, "Insufficient memory to allocate MAU queue");
 
-    task_intercom_fiware_measurement_queue = xQueueCreate(CONFIG_ITC_IOTA_MEASUREMENT_QUEUE_SIZE, sizeof(itc_iota_measurement_t));
+    task_intercom_fiware_measurement_queue = xQueueCreate(CONFIG_ITC_IOTA_MEASUREMENT_QUEUE_SIZE, sizeof(itc_message_t));
 
     ESP_RETURN_ON_FALSE(task_intercom_fiware_measurement_queue != NULL, ESP_FAIL, TAG, "Insufficient memory to allocate IoT Measurement queue");
 
@@ -39,4 +39,50 @@ esp_err_t task_intercom_init()
     ESP_RETURN_ON_FALSE(task_intercom_fiware_command_queue != NULL, ESP_FAIL, TAG, "Insufficient memory to allocate IoT Command queue");
 
     return ESP_OK;
+}
+
+/**
+ * @brief Deletes a heap-allocated ITC message
+ *
+ * @param message the message pointer to be deleted
+ */
+void task_intercom_message_delete(itc_message_t *message)
+{
+    free(message->payload);
+    free(message->response);
+}
+
+/**
+ * @brief Allocates a message on the stack
+ *
+ * @return itc_message_t* the pointer to the message
+ */
+itc_message_t *task_intercom_message_create()
+{
+    return (itc_message_t *)malloc(sizeof(itc_message_t));
+}
+
+/**
+ * @brief Initializes an ITC message
+ *
+ * @param message pointer to the message struct
+ */
+void task_intercom_message_init(itc_message_t *message)
+{
+    message->message_id = 0;
+    message->payload = NULL;
+    message->response = NULL;
+    message->is_measurement = false;
+}
+
+/**
+ * @brief Checks if the message is initialized and empty
+ *
+ * @param message pointer to the message
+ * @return true if the payload and the response arrays are NULL
+ * @return false otherwise
+ */
+bool task_intercom_message_is_empty(itc_message_t *message)
+{
+    return message->payload == NULL && message->response == NULL;
 }

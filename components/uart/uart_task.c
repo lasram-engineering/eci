@@ -32,8 +32,6 @@ static uart_config_t uart_config_robot = {
 const uart_port_t uart_robot = UART_NUM_1;
 QueueHandle_t uart_queue_robot;
 
-char input_buffer[UART_BUF_LEN];
-
 /**
  * @brief Manages communication with the Kawasaki Controller and responds to messages and errors from the MAU task
  *
@@ -61,14 +59,17 @@ void uart_task(void *arg)
     ESP_LOGI(TAG, "Initialization done.");
 
     esp_err_t ret;
+    char *payload = NULL;
 
     /* LOOP */
     while (1)
     {
-        // clear the input buffer
-        input_buffer[0] = '\0';
+        // clear the payload buffer
+        if (payload != NULL)
+            free(payload);
+        payload = NULL;
 
-        ret = kawasaki_read_transmission(uart_robot, input_buffer, UART_BUF_LEN, pdMS_TO_TICKS(UART_TIMEOUT_MS));
+        ret = kawasaki_read_transmission(uart_robot, &payload, pdMS_TO_TICKS(UART_TIMEOUT_MS));
 
         if (ret == ESP_ERR_TIMEOUT)
         {
@@ -81,33 +82,52 @@ void uart_task(void *arg)
         {
 
             // check if it was not an empty message
-            if (strlen(input_buffer) == 0)
+            if (strlen(payload) == 0)
                 continue;
 
             // no error has occurred
             // process the incoming message
-            ESP_LOGI(TAG, "Incoming message: %s", input_buffer);
+            ESP_LOGI(TAG, "Incoming message: %s", payload);
 
-            // process and try to send the message to the mau
-            ret = process_payload(input_buffer);
+            itc_message_t *message = task_intercom_message_create();
+            task_intercom_message_init(message);
 
+            // parse the message
+            ret = kawasaki_parse_transmission(payload, message);
+
+            // check if the message parsing was successful or not
             if (ret == ESP_FAIL)
             {
-                // respond with BUSY message
-                ret = kawasaki_write_transmission(uart_robot, "BUSY"); // TODO refine this
+                ret = kawasaki_write_transmission(uart_robot, "INVALID ID");
 
                 if (ret != ESP_OK)
                 {
                     const char *error = esp_err_to_name(ret);
-                    ESP_LOGE(TAG, "Error sending BUSY to robot: %d -> %s", ret, error);
+                    ESP_LOGE(TAG, "Error sending INVALID ID to robot: %d -> %s", ret, error);
                 }
 
                 continue;
             }
-            if (ret == ESP_ERR_INVALID_ARG)
+
+            // message is measurement
+            if (message->is_measurement)
+                ret = xQueueSend(task_intercom_fiware_measurement_queue, (void *)&message, 0);
+            // message is not measurement
+            else
+                ret = xQueueSend(task_intercom_mau_queue, (void *)&message, 0);
+
+            // check if the message was added to the queue
+            if (ret == errQUEUE_FULL)
             {
-                ESP_LOGE(TAG, "Invalid argument");
-                continue;
+                // respond with busy message
+                message->response = "BUSY";
+                ret = kawasaki_make_response(uart_robot, message);
+
+                if (ret != ESP_OK)
+                {
+                    const char *error = esp_err_to_name(ret);
+                    ESP_LOGE(TAG, "Error sending %s to robot: %d -> %s", message->response, ret, error);
+                }
             }
 
             continue;
