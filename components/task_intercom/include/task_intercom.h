@@ -10,6 +10,7 @@ typedef struct
     uint16_t message_id;
     char *payload;
     char *response;
+    const char *response_static;
     bool is_measurement;
 } itc_message_t;
 
@@ -32,6 +33,8 @@ esp_err_t task_intercom_init();
 void task_intercom_message_delete(itc_message_t *message);
 
 itc_message_t *task_intercom_message_create();
+
+itc_message_t *task_intercom_message_copy(itc_message_t *message);
 
 void task_intercom_message_init(itc_message_t *message);
 

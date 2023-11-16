@@ -43,6 +43,6 @@ esp_err_t kawasaki_read_transmission(uart_port_t port, char **payload, TickType_
 
 esp_err_t kawasaki_write_transmission(uart_port_t port, const char *payload);
 
-esp_err_t kawasaki_parse_transmission(const char *payload, itc_message_t *message);
+esp_err_t kawasaki_parse_transmission(const char *payload, itc_message_t **message);
 
 esp_err_t kawasaki_make_response(uart_port_t port, itc_message_t *message);

@@ -3,10 +3,6 @@
 #include <string.h>
 
 #define KAWASAKI_INTERNAL_PAYLOAD_BUFFER_SIZE 32
-#define KAWASAKI_TRANSMISSION_SEPARATOR_ID "|"
-#define KAWASAKI_TRANSMISSION_ID_CHAR '#'
-
-#define KAWASAKI_TRANSMISSION_TYPE_MEASUREMENT "MEASUREMENT"
 
 static const char *TAG = "Kawasaki";
 
@@ -363,6 +359,15 @@ esp_err_t kawasaki_write_transmission(uart_port_t port, const char *payload)
     return ESP_FAIL;
 }
 
+#define KAWASAKI_TRANSMISSION_TYPE_POSTFIX ":"
+#define KAWASAKI_TRANSMISSION_ID_POSTFIX "@"
+#define KAWASAKI_TRANSMISSION_ID_CHAR '#'
+
+#define KAWASAKI_TRANSMISSION_TYPE_MEASUREMENT "MEASUREMENT"
+#define KAWASAKI_TRANSMISSION_TYPE_COMMAND "COMMAND"
+
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+
 /**
  * @brief Parses a transmission payload from the Kawasaki Controller
  *
@@ -370,31 +375,41 @@ esp_err_t kawasaki_write_transmission(uart_port_t port, const char *payload)
  * @param message pointer to the empty message struct
  * @return esp_err_t
  */
-esp_err_t kawasaki_parse_transmission(const char *raw, itc_message_t *message)
+esp_err_t kawasaki_parse_transmission(const char *raw, itc_message_t **message)
 {
     /**
      * transmission payload syntax:
-     * #<id>@<param1>|<param2>
+     * #<transmission_type>:<id>@<param1>|<param2>
      *
+     * transmission_type can be:
+     *  - COMMAND
+     *  - MEASUREMENT
      */
-    if (raw == NULL || !task_intercom_message_is_empty(message))
+    if (raw == NULL || !task_intercom_message_is_empty(*message))
         return ESP_ERR_INVALID_ARG;
 
     // copy the payload string
     char *transmission = (char *)malloc(sizeof(char) * (strlen(raw) + 1));
     strcpy(transmission, raw);
 
-    char *token = strtok(transmission, KAWASAKI_TRANSMISSION_SEPARATOR_ID);
+    // separate the header and payload
+    char *header = strtok(transmission, KAWASAKI_TRANSMISSION_ID_POSTFIX);
+    char *payload = strtok(NULL, "");
 
-    // check if the id starts with the '#' symbol
-    if (token[0] != KAWASAKI_TRANSMISSION_ID_CHAR)
+    // check if the header starts with the '#' symbol
+    if (header[0] != KAWASAKI_TRANSMISSION_ID_CHAR)
     {
         free(transmission);
         return ESP_FAIL;
     }
 
+    // get the command type
+    // this is the string from the second character of the token
+    char *transmission_type = strtok(header, KAWASAKI_TRANSMISSION_TYPE_POSTFIX) + 1;
+    char *id_string = strtok(NULL, "");
+
     // convert the id to integer starting from the second character
-    uint16_t id = atoi(token + 1);
+    uint16_t id = atoi(id_string + 1);
 
     if (id == 0)
     {
@@ -402,24 +417,30 @@ esp_err_t kawasaki_parse_transmission(const char *raw, itc_message_t *message)
         return ESP_FAIL;
     }
 
-    token = strtok(NULL, KAWASAKI_TRANSMISSION_SEPARATOR_ID);
-
     // allocate the payload of the message
-    char *payload = (char *)malloc(sizeof(char) * (strlen(token) + 1));
+    char *payload_allocated = (char *)malloc(sizeof(char) * (strlen(payload) + 1));
     // copy the payload from the token
-    strcpy(payload, token);
+    strcpy(payload_allocated, payload);
 
-    message->payload = payload;
-    message->message_id = id;
+    (*message)->payload = payload;
+    (*message)->message_id = id;
 
-    // check if the payload is a measurement
-    // if it is the token should start with a measurement
-    if (strncmp(token, KAWASAKI_TRANSMISSION_TYPE_MEASUREMENT, strlen(KAWASAKI_TRANSMISSION_TYPE_MEASUREMENT)) == 0)
-        message->is_measurement = true;
+    // check the transmission type
+    if (strncmp(transmission_type, KAWASAKI_TRANSMISSION_TYPE_COMMAND, MIN(strlen(KAWASAKI_TRANSMISSION_TYPE_COMMAND), strlen(transmission_type))) == 0)
+    {
+        (*message)->is_measurement = false;
+        free(transmission);
+        return ESP_OK;
+    }
+    if (strncmp(transmission_type, KAWASAKI_TRANSMISSION_TYPE_MEASUREMENT, MIN(strlen(KAWASAKI_TRANSMISSION_TYPE_MEASUREMENT), strlen(transmission_type))) == 0)
+    {
+        (*message)->is_measurement = true;
+        free(transmission);
+        return ESP_OK;
+    }
 
     free(transmission);
-
-    return ESP_OK;
+    return ESP_FAIL;
 }
 
 /**
@@ -434,11 +455,15 @@ esp_err_t kawasaki_make_response(uart_port_t port, itc_message_t *message)
     char *payload;
     int ret;
 
-    if (message->response == NULL)
+    if (message->response == NULL && message->response_static == NULL)
         return ESP_ERR_INVALID_ARG;
 
     // allocate and print the payload
-    ret = asprintf(&payload, "#%d@%s", message->message_id, message->response);
+    if (message->response != NULL)
+        ret = asprintf(&payload, "#%d@%s", message->message_id, message->response);
+
+    else
+        ret = asprintf(&payload, "#%d@%s", message->message_id, message->response_static);
 
     if (ret == -1)
         return ESP_ERR_NO_MEM;
