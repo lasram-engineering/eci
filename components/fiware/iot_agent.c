@@ -96,7 +96,7 @@ fiware_iota_make_measurement(const char *payload, FiwareAccessToken_t *token, in
     // get the status code of the event
     ret = esp_http_client_get_status_code(client);
 
-    else if (ret == 404)
+    if (ret == 404)
     {
         ESP_LOGW(TAG, "Could not find device with apikey '" CONFIG_IOT_AGENT_APIKEY "' maybe service group is not registered?");
     }

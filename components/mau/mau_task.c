@@ -28,8 +28,6 @@ const uart_port_t uart_num = UART_NUM_2;
 QueueHandle_t uart_queue;
 
 char uart_buffer[UART_BUFFER_LEN];
-itc_mau_message_t mau_incoming_message;
-itc_uart_message_t uart_message;
 
 /**
  * Task function for interaction with the MAU (Measurement and Actuation Unit)
@@ -58,16 +56,18 @@ void mau_task(void *arg)
     ESP_LOGI(TAG, "Initialization done");
 
     esp_err_t ret;
+    itc_message_t *incoming_message;
 
     while (1)
     {
-        // wait for the queue to have items
-        xQueueReceive(task_intercom_mau_queue, &mau_incoming_message, portMAX_DELAY);
 
-        ESP_LOGI(TAG, "Incoming message: %s", mau_incoming_message.payload);
+        // wait for the queue to have items
+        xQueueReceive(task_intercom_mau_queue, &incoming_message, portMAX_DELAY);
+
+        ESP_LOGI(TAG, "Incoming message: %s", incoming_message->payload);
 
         // send the message to the MAU
-        ret = uart_write_bytes(uart_num, mau_incoming_message.payload, strlen(mau_incoming_message.payload));
+        ret = uart_write_bytes(uart_num, incoming_message->payload, strlen(incoming_message->payload));
 
         // receive the response from the MAU
         ret = uart_read_string(uart_num, uart_buffer, UART_BUFFER_LEN, UART_READ_TIMEOUT_MS / portTICK_PERIOD_MS);
@@ -78,20 +78,16 @@ void mau_task(void *arg)
             const char *error_msg = esp_err_to_name(ret);
             ESP_LOGW(TAG, "An error occurred while reading from MAU: %d -> %s", ret, error_msg);
 
-            // check if the error message fits the buffer
-            if (strlen(error_msg) >= CONFIG_ITC_UART_MESSAGE_SIZE)
-                abort();
-
-            sprintf(uart_message.payload, "%s|%s", mau_incoming_message.payload, error_msg);
+            // copy the character pointer into the static response
+            incoming_message->response_static = error_msg;
         }
         else
         {
             // the response was read
-            // set the response to the send buffer
-            strcpy(uart_message.payload, uart_buffer);
+            asprintf(&incoming_message->response, "%s", uart_buffer);
         }
 
         // append the uart message to the queue
-        xQueueSend(task_intercom_uart_queue, &uart_message, portMAX_DELAY);
+        xQueueSend(task_intercom_uart_queue, &incoming_message, portMAX_DELAY);
     }
 }
