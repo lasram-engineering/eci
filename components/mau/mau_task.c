@@ -76,7 +76,7 @@ void mau_task(void *arg)
         ret = uart_write_bytes(uart_num, incoming_message->payload, strlen(incoming_message->payload));
 
         // receive the response from the MAU
-        ret = uart_read_string(uart_num, uart_buffer, UART_BUFFER_LEN, UART_READ_TIMEOUT_MS / portTICK_PERIOD_MS);
+        ret = uart_read_string(uart_num, uart_buffer, UART_BUFFER_LEN, pdMS_TO_TICKS(UART_READ_TIMEOUT_MS));
 
         if (ret != ESP_OK)
         {

@@ -12,5 +12,3 @@
 #define UART_TIMEOUT_MS 100
 
 void uart_task(void *arg);
-
-esp_err_t process_incoming_messages();

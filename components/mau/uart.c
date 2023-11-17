@@ -19,7 +19,7 @@ esp_err_t uart_read_string(uart_port_t port, char *buffer, const unsigned int bu
     for (i = 0; i < buffer_length; i++)
     {
         // block unitl a byte is incomingm, or the timeout happens
-        ret = uart_read_bytes(port, &input, 1, delay_ticks / portTICK_PERIOD_MS);
+        ret = uart_read_bytes(port, &input, 1, delay_ticks);
 
         if (ret == 0)
             return ESP_ERR_TIMEOUT;
