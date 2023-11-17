@@ -15,7 +15,7 @@
 
 static const char *TAG = "FIWARE Task";
 
-static const char *KW_PROGRAM_UPDATE = "program_update";
+static const char *KW_PROGRAM_UPDATE = "update_program";
 
 static fiware_iota_command_t fiware_incoming_command;
 

@@ -80,9 +80,6 @@ void wifi_connect_to_station()
 
     netif_handle = esp_netif_next(netif_handle);
 
-    // set the hostname of the device
-    esp_netif_set_hostname(netif_handle, CONFIG_WIFI_HOST);
-
     // initialize net interface
     ESP_ERROR_CHECK(esp_netif_init());
     esp_netif_create_default_wifi_sta();
@@ -90,6 +87,9 @@ void wifi_connect_to_station()
     // create wifi config and initialize
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+
+    // set the hostname of the device
+    esp_netif_set_hostname(netif_handle, CONFIG_WIFI_HOST);
 
     // create and register event handlers
     esp_event_handler_instance_t instance_any_id;

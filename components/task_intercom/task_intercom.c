@@ -48,9 +48,12 @@ esp_err_t task_intercom_init()
  */
 void task_intercom_message_delete(itc_message_t *message)
 {
-    free(message->payload);
+    if (message->payload != NULL)
+        free(message->payload);
     if (message->response != NULL)
         free(message->response);
+
+    free(message);
 }
 
 /**

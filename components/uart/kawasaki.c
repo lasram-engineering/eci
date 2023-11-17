@@ -160,7 +160,7 @@ typedef enum
 /// no answer after the ACK message. ESP_FAIL if there was an unexpected error.
 esp_err_t kawasaki_read_transmission(uart_port_t port, char **payload, TickType_t ticks_to_wait)
 {
-    if (payload != NULL)
+    if (*payload != NULL)
         return ESP_ERR_INVALID_ARG;
 
     char input;
@@ -197,8 +197,10 @@ esp_err_t kawasaki_read_transmission(uart_port_t port, char **payload, TickType_
 
             // check if the payload has been acquired
             if (*payload == NULL)
+            {
                 state = WAIT_STX;
-            break;
+                break;
+            }
 
             state = WAIT_EOT;
             break;
@@ -235,10 +237,10 @@ esp_err_t kawasaki_read_transmission(uart_port_t port, char **payload, TickType_
             {
                 // trim the payload buffer if needed
                 if (strlen(*payload) + 1 != payload_buffer_size)
-                    *payload = (char *)realloc(*payload, sizeof(*payload) + 1);
-
+                    *payload = (char *)realloc(*payload, strlen(*payload) + 1);
                 // go to next state
                 state = SEND_ACK;
+                break;
             }
 
             // check if the buffer is full
@@ -251,7 +253,7 @@ esp_err_t kawasaki_read_transmission(uart_port_t port, char **payload, TickType_
             }
 
             // append the input to the payload
-            *payload[payload_index] = input;
+            (*payload)[payload_index] = input;
             // increment the index
             payload_index++;
 
@@ -269,6 +271,8 @@ esp_err_t kawasaki_read_transmission(uart_port_t port, char **payload, TickType_
 
             if (input == UNICODE_EOT)
                 return ESP_OK;
+
+            ESP_LOGI(TAG, "Unexpected input: %d", (uint8_t)input);
         }
     }
 }
@@ -408,6 +412,9 @@ esp_err_t kawasaki_parse_transmission(const char *raw, itc_message_t **message)
     char *transmission_type = strtok(header, KAWASAKI_TRANSMISSION_TYPE_POSTFIX) + 1;
     char *id_string = strtok(NULL, "");
 
+    if (id_string == NULL)
+        return ESP_FAIL;
+
     // convert the id to integer starting from the second character
     uint16_t id = atoi(id_string + 1);
 
@@ -422,7 +429,7 @@ esp_err_t kawasaki_parse_transmission(const char *raw, itc_message_t **message)
     // copy the payload from the token
     strcpy(payload_allocated, payload);
 
-    (*message)->payload = payload;
+    (*message)->payload = payload_allocated;
     (*message)->message_id = id;
 
     // check the transmission type
@@ -460,10 +467,10 @@ esp_err_t kawasaki_make_response(uart_port_t port, itc_message_t *message)
 
     // allocate and print the payload
     if (message->response != NULL)
-        ret = asprintf(&payload, "#%d@%s", message->message_id, message->response);
+        ret = asprintf(&payload, "#%ld@%s", message->message_id, message->response);
 
     else
-        ret = asprintf(&payload, "#%d@%s", message->message_id, message->response_static);
+        ret = asprintf(&payload, "#%ld@%s", message->message_id, message->response_static);
 
     if (ret == -1)
         return ESP_ERR_NO_MEM;

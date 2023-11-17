@@ -20,7 +20,7 @@ char *TAG = "UART";
  * Configuration for UART robot
  */
 static uart_config_t uart_config_robot = {
-    .baud_rate = UART_BAUD_ROBOT,
+    .baud_rate = CONFIG_UART_BAUD,
     .data_bits = UART_DATA_8_BITS,
     .parity = UART_PARITY_DISABLE,
     .stop_bits = UART_STOP_BITS_1,
@@ -44,7 +44,13 @@ void uart_task(void *arg)
     ESP_ERROR_CHECK(uart_param_config(uart_robot, &uart_config_robot));
 
     // set the pins to the uart
-    ESP_ERROR_CHECK(uart_set_pin(uart_robot, UART_TX, UART_RX, UART_RTS, UART_CTS));
+    ESP_ERROR_CHECK(
+        uart_set_pin(
+            uart_robot,
+            CONFIG_UART_TX,
+            CONFIG_UART_RX,
+            CONFIG_UART_RTS,
+            CONFIG_UART_CTS));
 
     // install driver
     ESP_ERROR_CHECK(
@@ -82,7 +88,10 @@ void uart_task(void *arg)
 
             // check if it was not an empty message
             if (strlen(payload) == 0)
+            {
+                ESP_LOGI(TAG, "Payload is empty.");
                 continue;
+            }
 
             // no error has occurred
             // process the incoming message
@@ -107,6 +116,8 @@ void uart_task(void *arg)
 
                 continue;
             }
+
+            ESP_LOGI(TAG, "ITC(%ld) payload: %s", message->message_id, message->payload);
 
             ret = xQueueSend(task_intercom_mau_queue, (void *)&message, 0);
 
@@ -147,7 +158,12 @@ esp_err_t process_incoming_messages()
     if (ret == pdFALSE)
         return ESP_ERR_NOT_FOUND;
 
-    ESP_LOGI(TAG, "Sending message to robot: (ID: %d) %s", incoming_message->message_id, incoming_message->payload);
+    if (incoming_message->response == NULL && incoming_message->response_static == NULL)
+        return ESP_ERR_INVALID_ARG;
+
+    const char *response = incoming_message->response != NULL ? incoming_message->response : incoming_message->response_static;
+
+    ESP_LOGI(TAG, "Sending message to robot: (ID: %ld) %s", incoming_message->message_id, response);
 
     // check if the incoming message is an error message
     ret = kawasaki_make_response(uart_robot, incoming_message);
@@ -155,24 +171,26 @@ esp_err_t process_incoming_messages()
     switch (ret)
     {
     case ESP_FAIL:
-        ESP_LOGW(TAG, "Transmission failed: %s", incoming_message->payload);
+        ESP_LOGW(TAG, "Transmission failed: %s", response);
         break;
 
     case ESP_ERR_INVALID_RESPONSE:
-        ESP_LOGW(TAG, "Invalid response to: %s", incoming_message->payload);
+        ESP_LOGW(TAG, "Invalid response to: %s", response);
         break;
 
     case ESP_ERR_NOT_FINISHED:
-        ESP_LOGW(TAG, "Possible ENQ collision during sending %s", incoming_message->payload);
+        ESP_LOGW(TAG, "Possible ENQ collision during sending %s", response);
         break;
 
     case ESP_ERR_TIMEOUT:
-        ESP_LOGW(TAG, "Message timed out: %s", incoming_message->payload);
+        ESP_LOGW(TAG, "Message timed out: %s", response);
         break;
 
     default:
         break;
     }
+
+    task_intercom_message_delete(incoming_message);
 
     return ret;
 }

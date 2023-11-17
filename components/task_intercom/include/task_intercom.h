@@ -7,7 +7,7 @@
 
 typedef struct
 {
-    uint16_t message_id;
+    uint32_t message_id;
     char *payload;
     char *response;
     const char *response_static;
