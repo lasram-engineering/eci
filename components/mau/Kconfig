@@ -4,4 +4,24 @@ menu "MAU Task Configuration"
         default 15
         help
             "Priority of the task"
+
+    config MAU_TX
+        int "MAU Transfer pin"
+        default 0
+    
+    config MAU_RX
+        int "MAU Read pin"
+        default 2
+
+    config MAU_RTS
+        int "MAU RTS pin"
+        default 4
+
+    config MAU_CTS
+        int "MAU CTS pin"
+        default 16
+
+    config MAU_BAUD
+        int "MAU communication baudrate"
+        default 115200
 endmenu

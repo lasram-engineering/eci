@@ -2,8 +2,7 @@
 
 #include <string.h>
 
-#include <driver/uart.h>
-#include <esp_log.h>
+#define KAWASAKI_INTERNAL_PAYLOAD_BUFFER_SIZE 32
 
 static const char *TAG = "Kawasaki";
 
@@ -91,7 +90,7 @@ esp_err_t kawasaki_read_transmission_payload(uart_port_t port, char *buffer, con
  *  ESP_TIMEOUT if there was a timeout
  *  ESP_ERR_INVALID_RESPONSE if the response was invalid
  */
-esp_err_t kawasaki_read_transmission(uart_port_t port, char *buffer, const int buffer_length, TickType_t ticks_to_wait)
+esp_err_t kawasaki_read_transmission_preallocated(uart_port_t port, char *buffer, const int buffer_length, TickType_t ticks_to_wait)
 {
 
     // wait until the semaphore is available
@@ -141,6 +140,141 @@ esp_err_t kawasaki_read_transmission(uart_port_t port, char *buffer, const int b
     uart_read_bytes(port, &input, 1, PROTOCOL_T2 / portTICK_PERIOD_MS);
 
     return ESP_OK;
+}
+
+typedef enum
+{
+    WAIT_ENQ,
+    SEND_ACK,
+    WAIT_STX,
+    RECEIVE_TEXT,
+    WAIT_EOT,
+} kawasaki_transmission_state_machine_t;
+
+/// @brief Reads an incoming UART transmission from a Kawasaki Controller
+/// @param port the UART port to read from
+/// @param payload char pointer (must be NULL). The user is expected to free the resource
+/// @param ticks_to_wait number of ticks to wait before returning with timeout
+/// @return esp_err_t ESP_OK if the transmission was read. ESP_ERR_TIMEOUT if a timeout has occurred
+/// ESP_ERR_INVALID_ARG if the payload was not set to NULL. ESP_ERR_INVALID_RESPONSE if there was
+/// no answer after the ACK message. ESP_FAIL if there was an unexpected error.
+esp_err_t kawasaki_read_transmission(uart_port_t port, char **payload, TickType_t ticks_to_wait)
+{
+    if (*payload != NULL)
+        return ESP_ERR_INVALID_ARG;
+
+    char input;
+    int ret;
+    kawasaki_transmission_state_machine_t state = WAIT_ENQ;
+
+    uint16_t payload_buffer_size = KAWASAKI_INTERNAL_PAYLOAD_BUFFER_SIZE;
+    uint16_t payload_index = 0;
+
+    while (1)
+    {
+        // reset the input char
+        input = 0;
+
+        switch (state)
+        {
+        case WAIT_ENQ:
+            // read input
+            ret = uart_read_bytes(port, &input, 1, ticks_to_wait);
+
+            // check for timeout
+            if (ret == 0)
+                return ESP_ERR_TIMEOUT;
+
+            // if ENQ proceed to next state
+            if (input == UNICODE_ENQ)
+                state = SEND_ACK;
+
+            break;
+
+        case SEND_ACK:
+            // send the ACK
+            uart_write_bytes(port, &UNICODE_ACK, 1);
+
+            // check if the payload has been acquired
+            if (*payload == NULL)
+            {
+                state = WAIT_STX;
+                break;
+            }
+
+            state = WAIT_EOT;
+            break;
+
+        case WAIT_STX:
+            // read input
+            ret = uart_read_bytes(port, &input, 1, pdTICKS_TO_MS(PROTOCOL_T3));
+
+            if (ret == 0)
+                // timeout -> 5. No answer after sending ACK
+                return ESP_ERR_INVALID_RESPONSE;
+
+            if (input == UNICODE_STX)
+            {
+                // allocate the text buffer
+                *payload = (char *)calloc(payload_buffer_size, sizeof(char));
+                // go to next state
+                state = RECEIVE_TEXT;
+            }
+            break;
+
+        case RECEIVE_TEXT:
+            // read input
+            ret = uart_read_bytes(port, &input, 1, pdTICKS_TO_MS(PROTOCOL_T3));
+
+            if (ret == 0)
+            {
+                free(*payload);
+                return ESP_FAIL;
+            }
+
+            // check if we have received an ETX
+            if (input == UNICODE_ETX)
+            {
+                // trim the payload buffer if needed
+                if (strlen(*payload) + 1 != payload_buffer_size)
+                    *payload = (char *)realloc(*payload, strlen(*payload) + 1);
+                // go to next state
+                state = SEND_ACK;
+                break;
+            }
+
+            // check if the buffer is full
+            if (payload_index + 1 == payload_buffer_size)
+            {
+                // increase the buffer size
+                payload_buffer_size += KAWASAKI_INTERNAL_PAYLOAD_BUFFER_SIZE;
+                // reallocate the buffer
+                *payload = (char *)realloc(*payload, payload_buffer_size);
+            }
+
+            // append the input to the payload
+            (*payload)[payload_index] = input;
+            // increment the index
+            payload_index++;
+
+            break;
+
+        case WAIT_EOT:
+            // read input
+            ret = uart_read_bytes(port, &input, 1, pdTICKS_TO_MS(PROTOCOL_T3));
+
+            if (ret == 0)
+            {
+                free(*payload);
+                return ESP_FAIL;
+            }
+
+            if (input == UNICODE_EOT)
+                return ESP_OK;
+
+            ESP_LOGI(TAG, "Unexpected input: %d", (uint8_t)input);
+        }
+    }
 }
 
 /**
@@ -227,4 +361,124 @@ esp_err_t kawasaki_write_transmission(uart_port_t port, const char *payload)
     uart_write_bytes(port, &UNICODE_EOT, 1);
 
     return ESP_FAIL;
+}
+
+#define KAWASAKI_TRANSMISSION_TYPE_POSTFIX ":"
+#define KAWASAKI_TRANSMISSION_ID_POSTFIX "@"
+#define KAWASAKI_TRANSMISSION_ID_CHAR '#'
+
+#define KAWASAKI_TRANSMISSION_TYPE_MEASUREMENT "MEASUREMENT"
+#define KAWASAKI_TRANSMISSION_TYPE_COMMAND "COMMAND"
+
+#define MIN(a, b) (((a) < (b)) ? (a) : (b))
+
+/**
+ * @brief Parses a transmission payload from the Kawasaki Controller
+ *
+ * @param raw pointer to the raw transmission payload char array
+ * @param message pointer to the empty message struct
+ * @return esp_err_t
+ */
+esp_err_t kawasaki_parse_transmission(const char *raw, itc_message_t **message)
+{
+    /**
+     * transmission payload syntax:
+     * #<transmission_type>:<id>@<param1>|<param2>
+     *
+     * transmission_type can be:
+     *  - COMMAND
+     *  - MEASUREMENT
+     */
+    if (raw == NULL || !task_intercom_message_is_empty(*message))
+        return ESP_ERR_INVALID_ARG;
+
+    // copy the payload string
+    char *transmission = (char *)malloc(sizeof(char) * (strlen(raw) + 1));
+    strcpy(transmission, raw);
+
+    // separate the header and payload
+    char *header = strtok(transmission, KAWASAKI_TRANSMISSION_ID_POSTFIX);
+    char *payload = strtok(NULL, "");
+
+    // check if the header starts with the '#' symbol
+    if (header[0] != KAWASAKI_TRANSMISSION_ID_CHAR)
+    {
+        free(transmission);
+        return ESP_FAIL;
+    }
+
+    // get the command type
+    // this is the string from the second character of the token
+    char *transmission_type = strtok(header, KAWASAKI_TRANSMISSION_TYPE_POSTFIX) + 1;
+    char *id_string = strtok(NULL, "");
+
+    if (id_string == NULL)
+        return ESP_FAIL;
+
+    // convert the id to integer starting from the second character
+    uint16_t id = atoi(id_string + 1);
+
+    if (id == 0)
+    {
+        free(transmission);
+        return ESP_FAIL;
+    }
+
+    // allocate the payload of the message
+    char *payload_allocated = (char *)malloc(sizeof(char) * (strlen(payload) + 1));
+    // copy the payload from the token
+    strcpy(payload_allocated, payload);
+
+    (*message)->payload = payload_allocated;
+    (*message)->message_id = id;
+
+    // check the transmission type
+    if (strncmp(transmission_type, KAWASAKI_TRANSMISSION_TYPE_COMMAND, MIN(strlen(KAWASAKI_TRANSMISSION_TYPE_COMMAND), strlen(transmission_type))) == 0)
+    {
+        (*message)->is_measurement = false;
+        free(transmission);
+        return ESP_OK;
+    }
+    if (strncmp(transmission_type, KAWASAKI_TRANSMISSION_TYPE_MEASUREMENT, MIN(strlen(KAWASAKI_TRANSMISSION_TYPE_MEASUREMENT), strlen(transmission_type))) == 0)
+    {
+        (*message)->is_measurement = true;
+        free(transmission);
+        return ESP_OK;
+    }
+
+    free(transmission);
+    return ESP_FAIL;
+}
+
+/**
+ * @brief Makes and sends the response from the message object
+ *
+ * @param port the UART port to the Controller
+ * @param message the pointer to the message object
+ * @return esp_err_t ESP_ERR_INVALID_ARG if the message response is NULL. See kawasaki_write_transmission for more
+ */
+esp_err_t kawasaki_make_response(uart_port_t port, itc_message_t *message)
+{
+    char *payload;
+    int ret;
+
+    if (message->response == NULL && message->response_static == NULL)
+        return ESP_ERR_INVALID_ARG;
+
+    // allocate and print the payload
+    if (message->response != NULL)
+        ret = asprintf(&payload, "#%ld@%s", message->message_id, message->response);
+
+    else
+        ret = asprintf(&payload, "#%ld@%s", message->message_id, message->response_static);
+
+    if (ret == -1)
+        return ESP_ERR_NO_MEM;
+
+    // send the transmission to the robot
+    ret = kawasaki_write_transmission(port, payload);
+
+    free(payload);
+
+    return ret;
 }

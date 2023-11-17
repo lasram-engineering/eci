@@ -1,6 +1,7 @@
 #include "fiware_task.h"
 
 #include <string.h>
+#include <time.h>
 
 #include <esp_log.h>
 #include <esp_check.h>
@@ -14,12 +15,9 @@
 
 static const char *TAG = "FIWARE Task";
 
-static const char *KW_PROGRAM_UPDATE = "program_update";
+static const char *KW_PROGRAM_UPDATE = "update_program";
 
-static itc_iota_measurement_t fiware_incoming_measurement;
 static fiware_iota_command_t fiware_incoming_command;
-
-static itc_uart_message_t uart_message;
 
 static FiwareAccessToken_t fiware_access_token;
 
@@ -31,32 +29,44 @@ void fiware_task()
     app_state_wait_for_event(STATE_TYPE_INTERNAL, APP_STATE_INTERNAL_WIFI_CONNECTED);
 
     // wait for network time to be synchronized
+    ESP_LOGI(TAG, "Waiting for network time sync...");
     ESP_ERROR_CHECK_WITHOUT_ABORT(esp_netif_sntp_sync_wait(portMAX_DELAY));
+    ESP_LOGI(TAG, "Network time synchronized");
 
     ESP_LOGI(TAG, "Requesting access token from IdM");
 
     ret = fiware_idm_request_access_token(&fiware_access_token);
 
-    if (ret == ESP_OK)
-        ESP_LOGI(TAG, "Got access token: %s", fiware_access_token.token);
-    else
+    if (ret != ESP_OK)
         ESP_LOGE(TAG, "Unable to get access token");
+
+    itc_message_t *incoming_measurement;
+    itc_message_t *fiware_command_out;
+    time_t now;
 
     /* LOOP */
     while (1)
     {
         // block until a measurement payload comes in
-        ret = xQueueReceive(task_intercom_fiware_measurement_queue, &fiware_incoming_measurement, pdMS_TO_TICKS(CONFIG_FIWARE_TASK_MEASUREMENT_TIMEOUT));
+        ret = xQueueReceive(task_intercom_fiware_measurement_queue, &incoming_measurement, pdMS_TO_TICKS(CONFIG_FIWARE_TASK_MEASUREMENT_TIMEOUT));
 
         // check if the queue had items
         if (ret == pdTRUE)
         {
-            fiware_iota_make_measurement(fiware_incoming_measurement.payload, &fiware_access_token, NULL);
+            ret = fiware_iota_make_measurement(incoming_measurement->payload, &fiware_access_token, NULL);
+            if (ret == ESP_OK)
+                incoming_measurement->response_static = "OK";
+            else
+                incoming_measurement->response_static = "NO WIFI";
+
+            // send the command back to the UART task
+            xQueueSend(task_intercom_uart_queue, &fiware_command_out, portMAX_DELAY);
+
             continue;
         }
 
         // if there was a timeout, check the commands
-        ret = xQueuePeek(task_intercom_fiware_command_queue, &fiware_incoming_command, 0);
+        ret = xQueueReceive(task_intercom_fiware_command_queue, &fiware_incoming_command, 0);
 
         if (ret == pdFALSE)
             continue;
@@ -64,19 +74,20 @@ void fiware_task()
         // check for program update command
         if (strcmp(fiware_incoming_command.command_name, KW_PROGRAM_UPDATE) == 0)
         {
-            ESP_LOGI(TAG, "New porgam: %s", fiware_incoming_command.command_param);
+            ESP_LOGI(TAG, "New progam: %s", fiware_incoming_command.command_param);
 
-            // load the program name into the message payload
-            snprintf(uart_message.payload, CONFIG_ITC_IOTA_MEASUREMENT_MESSAGE_SIZE, "PROGRAM|%s", fiware_incoming_command.command_param);
+            fiware_command_out = task_intercom_message_create();
+            task_intercom_message_init(fiware_command_out);
 
-            // send the message to the queue
-            ret = xQueueSend(task_intercom_uart_queue, &uart_message, 0);
+            // set the id based on the time
+            time(&now);
+            fiware_command_out->message_id = now;
 
-            if (ret == errQUEUE_FULL)
-                ESP_LOGE(TAG, "Unable to send to UART task, queue full");
+            // allocate and load the param into the response
+            asprintf(&fiware_command_out->response, "PROGRAM|%s", fiware_incoming_command.command_param);
 
-            // remove the item from the queue
-            xQueueReceive(task_intercom_fiware_command_queue, &fiware_incoming_command, 0);
+            // send the response to the UART task (will wait forever)
+            xQueueSend(task_intercom_uart_queue, &fiware_command_out, portMAX_DELAY);
         }
     }
 }

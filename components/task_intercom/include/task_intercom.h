@@ -7,13 +7,12 @@
 
 typedef struct
 {
-    char payload[CONFIG_ITC_MAU_MESSAGE_SIZE];
-} itc_mau_message_t;
-
-typedef struct
-{
-    char payload[CONFIG_ITC_UART_MESSAGE_SIZE];
-} itc_uart_message_t;
+    uint32_t message_id;
+    char *payload;
+    char *response;
+    const char *response_static;
+    bool is_measurement;
+} itc_message_t;
 
 typedef struct
 {
@@ -30,3 +29,13 @@ extern QueueHandle_t task_intercom_fiware_measurement_queue;
 extern QueueHandle_t task_intercom_fiware_command_queue;
 
 esp_err_t task_intercom_init();
+
+void task_intercom_message_delete(itc_message_t *message);
+
+itc_message_t *task_intercom_message_create();
+
+itc_message_t *task_intercom_message_copy(itc_message_t *message);
+
+void task_intercom_message_init(itc_message_t *message);
+
+bool task_intercom_message_is_empty(itc_message_t *message);

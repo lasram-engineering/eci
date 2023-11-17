@@ -5,6 +5,8 @@
 #include <driver/uart.h>
 #include <esp_log.h>
 
+#include "task_intercom.h"
+
 /**
  * If both the robot and the ECI initiaites a transmission, the robot won't ACK the transmission
  * This is an ENQ collision
@@ -35,6 +37,12 @@ static const char UNICODE_EOT = 4;
 /** Not acknowledge */
 static const char UNICODE_NAK = 15;
 
-esp_err_t kawasaki_read_transmission(uart_port_t port, char *buffer, const int buffer_length, TickType_t ticks_to_wait);
+esp_err_t kawasaki_read_transmission_preallocated(uart_port_t port, char *buffer, const int buffer_length, TickType_t ticks_to_wait);
+
+esp_err_t kawasaki_read_transmission(uart_port_t port, char **payload, TickType_t ticks_to_wait);
 
 esp_err_t kawasaki_write_transmission(uart_port_t port, const char *payload);
+
+esp_err_t kawasaki_parse_transmission(const char *payload, itc_message_t **message);
+
+esp_err_t kawasaki_make_response(uart_port_t port, itc_message_t *message);

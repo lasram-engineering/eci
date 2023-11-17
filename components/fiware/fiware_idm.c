@@ -36,7 +36,10 @@ esp_err_t idm_access_token_event_handler(esp_http_client_event_handle_t event)
 
         // if the status is not OK then break from the switch
         if (esp_http_client_get_status_code(event->client) >= 300)
+        {
+            ESP_LOGW(TAG, "Error while requesting access token: %s", (char *)event->data);
             break;
+        }
 
         // cast the access token from the request user data
         FiwareAccessToken_t *token = (FiwareAccessToken_t *)event->user_data;
@@ -124,16 +127,21 @@ esp_err_t fiware_idm_request_access_token_grant_type(FiwareAccessToken_t *token,
         return ESP_ERR_INVALID_ARG;
     }
 
+    ESP_LOGD(TAG, "Requesting access token with payload: %s", payload);
+
     // set the data field to the payload
     esp_http_client_set_post_field(client, payload, strlen(payload));
 
     // execute the request
-    esp_http_client_perform(client);
-
-    int status_code = esp_http_client_get_status_code(client);
+    int ret = esp_http_client_perform(client);
 
     // free the payload variable
     free(payload);
+
+    if (ret != ESP_OK)
+        return ret;
+
+    int status_code = esp_http_client_get_status_code(client);
 
     if (status_code < 400)
     {
