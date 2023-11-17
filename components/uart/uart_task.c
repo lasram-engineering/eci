@@ -119,7 +119,10 @@ void uart_task(void *arg)
 
             ESP_LOGI(TAG, "ITC(%ld) payload: %s", message->message_id, message->payload);
 
-            ret = xQueueSend(task_intercom_mau_queue, (void *)&message, 0);
+            if (message->is_measurement)
+                ret = xQueueSend(task_intercom_fiware_measurement_queue, (void *)&message, 0);
+            else
+                ret = xQueueSend(task_intercom_mau_queue, (void *)&message, 0);
 
             // check if the message was added to the queue
             if (ret == errQUEUE_FULL)
