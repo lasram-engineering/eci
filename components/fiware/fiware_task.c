@@ -29,15 +29,15 @@ void fiware_task()
     app_state_wait_for_event(STATE_TYPE_INTERNAL, APP_STATE_INTERNAL_WIFI_CONNECTED);
 
     // wait for network time to be synchronized
+    ESP_LOGI(TAG, "Waiting for network time sync...");
     ESP_ERROR_CHECK_WITHOUT_ABORT(esp_netif_sntp_sync_wait(portMAX_DELAY));
+    ESP_LOGI(TAG, "Network time synchronized");
 
     ESP_LOGI(TAG, "Requesting access token from IdM");
 
     ret = fiware_idm_request_access_token(&fiware_access_token);
 
-    if (ret == ESP_OK)
-        ESP_LOGI(TAG, "Got access token: %s", fiware_access_token.token);
-    else
+    if (ret != ESP_OK)
         ESP_LOGE(TAG, "Unable to get access token");
 
     itc_message_t *incoming_measurement;

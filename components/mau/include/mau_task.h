@@ -3,13 +3,6 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-// UART pins for MAU
-#define UART_RX_MAU 2
-#define UART_TX_MAU 0
-#define UART_RTS_MAU 4
-#define UART_CTS_MAU 16
-#define UART_BAUD_MAU 115200
-
 #define UART_RX_BUFFER_SIZE 1024
 #define UART_TX_BUFFER_SIZE 1024
 #define UART_QUEUE_SIZE 10

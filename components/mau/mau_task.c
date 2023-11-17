@@ -16,7 +16,7 @@ static const char *TAG = "MAU";
  * Configuration for UART MAU
  */
 static uart_config_t uart_config = {
-    .baud_rate = UART_BAUD_MAU,
+    .baud_rate = CONFIG_MAU_BAUD,
     .data_bits = UART_DATA_8_BITS,
     .parity = UART_PARITY_DISABLE,
     .stop_bits = UART_STOP_BITS_1,
@@ -42,7 +42,13 @@ void mau_task(void *arg)
     ESP_ERROR_CHECK(uart_param_config(uart_num, &uart_config));
 
     // bind the pins to the UART interface
-    ESP_ERROR_CHECK(uart_set_pin(uart_num, UART_TX_MAU, UART_RX_MAU, UART_RTS_MAU, UART_CTS_MAU));
+    ESP_ERROR_CHECK(
+        uart_set_pin(
+            uart_num,
+            CONFIG_MAU_TX,
+            CONFIG_MAU_RX,
+            CONFIG_MAU_RTS,
+            CONFIG_MAU_CTS));
 
     // install the driver
     ESP_ERROR_CHECK(
