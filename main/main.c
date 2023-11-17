@@ -3,17 +3,12 @@
 #include "freertos/task.h"
 
 #include <nvs_flash.h>
-#include <esp_netif.h>
+#include <esp_netif_sntp.h>
 
 #include "server.h"
 #include "wifi.h"
 #include "app_state.h"
-#include "fiware.h"
-#include "tasks/common.h"
-
-#define ERROR_TASK_ENABLED 1
-#define INPUT_TASK_ENABLED 1
-#define ANALOG_TASK_ENABLED 1
+#include "task_manager.h"
 
 static httpd_handle_t server = NULL;
 
@@ -25,6 +20,10 @@ void app_main(void)
     ESP_ERROR_CHECK(nvs_flash_init());
     ESP_ERROR_CHECK(esp_event_loop_create_default());
 
+    // synchronize network time
+    esp_sntp_config_t config = ESP_NETIF_SNTP_DEFAULT_CONFIG("pool.ntp.org");
+    esp_netif_sntp_init(&config);
+
     // start tasks
     initialize_tasks();
 
@@ -32,21 +31,8 @@ void app_main(void)
     // blocking call
 #ifdef CONFIG_WIFI_ENABLED
     wifi_connect_to_station();
+
     // start http server
     server = start_http_server();
 #endif
-
-    // check the health of the server
-    esp_err_t server_online = fiware_check_health();
-
-    if (server_online != ESP_OK)
-        app_state_set(STATE_TYPE_ERROR, APP_STATE_ERROR_IOTA_OFFLINE);
-
-    while (server_online != ESP_OK)
-    {
-        server_online = fiware_check_health();
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
-
-    app_state_unset(STATE_TYPE_ERROR, APP_STATE_ERROR_IOTA_OFFLINE);
 }

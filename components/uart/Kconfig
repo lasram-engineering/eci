@@ -1,0 +1,39 @@
+menu "UART Task Configuration"
+    config UART_TASK_ENABLE
+        bool "Enable task"
+        help
+            Enable or disable the UART task (communication with robot controller)
+
+    config UART_TASK_PRIO
+        int "Task priority"
+        depends on UART_TASK_ENABLE
+        default 20
+        help
+            Priority of the task
+
+    config UART_RX
+        int "Read pin number"
+        depends on UART_TASK_ENABLE
+        default 17
+
+    config UART_TX
+        int "Transmit pin number"
+        depends on UART_TASK_ENABLE
+        default 5
+        
+    config UART_RTS
+        int "RTS pin"
+        depends on UART_TASK_ENABLE
+        default 18
+
+    config UART_CTS
+        int "CTS pin"
+        depends on UART_TASK_ENABLE
+        default 19
+        
+    config UART_BAUD
+        int "Uart baudrate"
+        depends on UART_TASK_ENABLE
+        default 9600
+        
+endmenu

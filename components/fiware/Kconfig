@@ -1,0 +1,122 @@
+menu "General FIWARE Configuration"
+    depends on FIWARE_TASK_ENABLE
+
+    config FIWARE_HOST
+        string "FIWARE Service Host"
+        default "192.168.152.90"
+        help
+            The host (IP) of the machine that hosts the FIWARE stack
+endmenu
+
+menu "FIWARE IoT Agent Configuration"
+    depends on FIWARE_TASK_ENABLE
+    
+    config IOT_AGENT_SOUTH_PORT
+        int "IoT Agent South Port"
+        default 7896
+        help
+            The south port of the FIWARE IoT Agent
+    
+    config IOT_AGENT_RESOURCE
+        string "IoT Agent Resource identifier"
+        default "/iot/d"
+        help 
+            The resource identifier of the FIWARE IoT Agent
+    
+    config IOT_AGENT_APIKEY
+        string "IoT Agent API key"
+        default "openiot"
+        help 
+            The API key of the IoT Agent
+    
+    config IOT_AGENT_DEVICE_ID
+        string "IoT Agent Device ID"
+        default "edi001"
+        help 
+            The ID of this device in the IoT Agent
+            
+    config IOT_DEVICE_ENDPOINT
+        string "IoT Device Endpoint"
+        default "/api"
+        help
+            The endpoint on which the HTTP server listens to incoming commands
+                    
+    menu "COMMANDS"
+        config IOT_AGENT_COMMAND_STRICT
+            bool "Iot Agent strict command checking"
+            help
+                If the flag is set an incoming IoT Agent command will only be executed if the device ID matches
+
+        config IOT_AGENT_COMMAND_NAME_LEN
+            int "IoT Agent UltraLight command name length"
+            default 32
+            help
+                The length of the buffer that stores the incoming command name
+
+        config IOT_AGENT_COMMAND_PAYLOAD_LEN
+            int "IoT Agent UltraLight command payload length"
+            default 32
+            help
+                The length of the buffer that stores the incoming command payload
+                        
+        config IOT_AGENT_COMMAND_INIT_RESPONSE
+            string "Initial response to IoT Command"
+            default "RECEIVED"
+            help
+                The initial response of the http server endpoint to an incoming IoT Device command
+    endmenu
+endmenu
+
+menu "FIWARE IdM Configuration"
+    depends on FIWARE_TASK_ENABLE
+
+    config FIWARE_IDM_PORT
+        int "FIWARE IdM port"
+        default 8088
+        help
+            The port of the FIWARE KeyRock IdM
+
+    config FIWARE_IDM_APP_ID
+        string "FIWARE IdM Application ID"
+        default "47239baf-a484-4067-b22b-1cf0e7494e48"
+        help
+            The application (client) ID from KeyRock IdM
+
+    config FIWARE_IDM_APP_SECRET
+        string "FIWARE IdM Application secret"
+        default "8c7d6e2d-5984-4595-99ee-a7872c730d17"
+        help
+            The application (client) secret from KeyRock IdM
+
+    config FIWARE_IDM_USERNAME
+        string "FIWARE IdM IoT Sensor username"
+        default "iot_sensor_8ece83c7-3846-470a-90ed-52bc41c9661b"
+        help
+            The username of the IoT Sensor registered in KeyRock IdM
+
+    config FIWARE_IDM_PASSWORD
+        string "FIWARE IdM IoT Sensor password"
+        default "iot_sensor_d859d9aa-733b-43b5-a67e-895b7c01affe"
+        help
+            The password of the IoT Sensor registered in KeyRock IdM
+endmenu
+
+menu "FIWARE Task Configuration"
+    config FIWARE_TASK_ENABLE
+        bool "Enable FIWARE task"
+        help
+            Enable or disable the communication task with the FIWARE IoT Platform
+
+    config FIWARE_TASK_PRIO
+        int "Task priority"
+        default 10
+        help
+            The priority of the task
+
+    config FIWARE_TASK_MEASUREMENT_TIMEOUT
+        int "Measurement timeout"
+        depends on FIWARE_TASK_ENABLE
+        default 1000
+        help
+            Specifies the wait time after which if no measurement is incoming, a command will be processed
+endmenu

@@ -1,71 +1,3 @@
-menu "FIWARE IoT Agent Configuration"
-config IOT_AGENT_HOST
-    string "IoT Agent Host"
-    default "192.168.1.100"
-    help 
-        The host (IP) of the FIWARE IoT Agent
-
-config IOT_AGENT_NORTH_PORT
-    string "IoT Agent North Port"
-    default "4041"
-    help 
-        The north port of the FIWARE IoT Agent
-
-config IOT_AGENT_SOUTH_PORT
-    string "IoT Agent South Port"
-    default "7896"
-    help
-        The south port of the FIWARE IoT Agent
-
-config IOT_AGENT_RESOURCE
-    string "IoT Agent Resource identifier"
-    default "/iot/d"
-    help 
-        The resource identifier of the FIWARE IoT Agent
-
-config IOT_AGENT_APIKEY
-    string "IoT Agent API key"
-    default "openiot"
-    help 
-        The API key of the IoT Agent
-
-config IOT_AGENT_DEVICE_ID
-    string "IoT Agent Device ID"
-    default "edi001"
-    help 
-        The ID of this device in the IoT Agent
-endmenu
-menu "WiFi Connection"
-    config WIFI_ENABLED
-        bool "WiFi enabled"
-        default true
-        
-    config WIFI_HOST
-        depends on WIFI_ENABLED
-        string "WiFi Hostname"
-        default "EmbeddedDeviceInterface"
-        help 
-            The WiFi hostname of the device
-            
-    config WIFI_SSID
-        depends on WIFI_ENABLED
-        string "WiFi SSID"
-        help
-            The SSID of the WiFi network to connect to
-
-    config WIFI_PASS
-        depends on WIFI_ENABLED
-        string "WiFi Password"
-        help
-            The password of the WiFi network
-
-    config WIFI_RETRY_ERROR_THRESHOLD
-        depends on WIFI_ENABLED
-        int "WiFi connection retry error threshold"
-        default 5
-        help
-            The number of connection retries before an error is thrown
-endmenu
 menu "GPIO"
     choice  INPUT_PULL_MODE
         prompt "Select input pin pull mode"
@@ -76,24 +8,5 @@ menu "GPIO"
         config INPUT_PULL_MODE_PULLDOWN
             bool "Pulldown"
     endchoice
-endmenu
-menu "Task times"
-    config ERROR_TASK_DELAY
-        int "Error task delay [ms]"
-        default 1000
-        help
-            The delay of the error task in ms
-    
-    config INPUT_TASK_DELAY
-        int "Input task delay [ms]"
-        default 100
-        help
-            The delay of the input task in ms
-
-    config ANALOG_TASK_DELAY
-        int "Analog measurement task delay [ms]"
-        default 5000
-        help
-            The delay of the analog measurement task in ms
 endmenu
 

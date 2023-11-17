@@ -1,0 +1,44 @@
+menu "Inter Task Communication"
+    config ITC_UART_QUEUE_SIZE
+        int "ITC UART queue size"
+        default 10
+        help
+            Queue size for the messages going to the Kawasaki Controller
+
+    config ITC_UART_MESSAGE_SIZE
+        int "ITC UART message size"
+        default 255
+        help 
+            The size of a single message of the queue
+
+    config ITC_MAU_QUEUE_SIZE
+        int "ITC MAU queue size"
+        default 10
+        help
+            Queue size for the messages going to the MAU
+
+    config ITC_MAU_MESSAGE_SIZE
+        int "ITC MAU message size"
+        default 255
+        help
+            
+            The size of a single message of the queue
+
+    config ITC_IOTA_MEASUREMENT_QUEUE_SIZE
+        int "ITC IoT Measurement queue size"
+        default 10
+        help
+            Queue size for the IoT measurements
+
+    config ITC_IOTA_MEASUREMENT_MESSAGE_SIZE
+        int "ITC IoT Measurement message size"
+        default 255
+        help
+            The size of a single message of the queue
+
+    config ITC_IOTA_COMMAND_QUEUE_SIZE
+        int "ITC IoT Command queue size"
+        default 1
+        help
+            Queue size for incoming IoT Commands
+endmenu
