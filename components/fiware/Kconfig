@@ -107,9 +107,15 @@ menu "FIWARE Task Configuration"
         help
             Enable or disable the communication task with the FIWARE IoT Platform
 
+    config FIWARE_TASK_STACK_DEPTH
+        int "FIWARE Task stack depth in WORDS"
+        depends on FIWARE_TASK_ENABLE
+        default 4000
+
     config FIWARE_TASK_PRIO
         int "Task priority"
-        default 10
+        depends on FIWARE_TASK_ENABLE
+        default 3
         help
             The priority of the task
 

@@ -8,7 +8,10 @@
 
 #include "server.h"
 #include "wifi.h"
-#include "task_manager.h"
+#include "task_intercom.h"
+#include "uart_task.h"
+#include "mau_task.h"
+#include "fiware_task.h"
 
 static httpd_handle_t server = NULL;
 
@@ -30,8 +33,18 @@ void app_main(void)
     // connect to wifi network
     ESP_ERROR_CHECK(wifi_connect_to_station());
 
-    // start tasks
-    initialize_tasks();
+    // create the itc queues
+    ESP_ERROR_CHECK(task_intercom_init());
+
+#ifdef CONFIG_UART_TASK_ENABLE
+    ESP_ERROR_CHECK(uart_start_task());
+#endif
+
+#ifdef CONFIG_FIWARE_TASK_ENABLE
+    ESP_ERROR_CHECK(fiware_start_task());
+#endif
+
+    ESP_ERROR_CHECK(mau_start_task());
 
     wifi_wait_connected(portMAX_DELAY);
 
