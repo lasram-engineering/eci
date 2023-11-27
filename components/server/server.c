@@ -6,43 +6,15 @@
 #include <esp_log.h>
 #include <esp_http_server.h>
 
-#include "app_state.h"
 #include "task_intercom.h"
 
 #define RESPONSE_BUFFER_LENGTH 2 * (15 + APP_STATE_LENGTH) + 1
 
 static const char *TAG = "Server";
 
-static char response[RESPONSE_BUFFER_LENGTH];
-
 esp_err_t get_handler(httpd_req_t *request)
 {
-    strcpy(response, "Error buffer: ");
-
-    EventBits_t error_bits = app_state_get(STATE_TYPE_ERROR);
-
-    int i;
-    for (i = APP_STATE_LENGTH - 1; 0 <= i; i--)
-    {
-        char *bit_str = error_bits & BIT(i) ? "1" : "0";
-        strcat(response, bit_str);
-    }
-
-    strcat(response, "\nInput buffer: ");
-
-    error_bits = app_state_get(STATE_TYPE_INPUT);
-
-    ESP_LOGI(TAG, "APP input state %ld", error_bits);
-
-    for (i = APP_STATE_LENGTH - 1; 0 <= i; i--)
-    {
-        char *bit_str = error_bits & BIT(i) ? "1" : "0";
-        strcat(response, bit_str);
-    }
-
-    httpd_resp_send(request, response, HTTPD_RESP_USE_STRLEN);
-
-    strcpy(response, "");
+    httpd_resp_send(request, "WIP", HTTPD_RESP_USE_STRLEN);
 
     return ESP_OK;
 }

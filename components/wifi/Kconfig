@@ -1,31 +1,17 @@
 menu "WiFi Connection"
-    config WIFI_ENABLED
-        bool "WiFi enabled"
-        default true
-        
-    config WIFI_HOST
-        depends on WIFI_ENABLED
-        string "WiFi Hostname"
-        default "EmbeddedDeviceInterface"
-        help 
-            The WiFi hostname of the device
-            
-    config WIFI_SSID
-        depends on WIFI_ENABLED
-        string "WiFi SSID"
-        help
-            The SSID of the WiFi network to connect to
+    config WIFI_STATION_NAME
+        string "Name of the station to connect to"
+    
+    config WIFI_STATION_PASSWORD
+        string "Password of the station"
 
-    config WIFI_PASS
-        depends on WIFI_ENABLED
-        string "WiFi Password"
-        help
-            The password of the WiFi network
+    menu "WiFi Task"
+        config WIFI_TASK_STACK_DEPTH
+            int "Depth of the stack allocated to the WiFi Task in WORDS"
+            default 4000
 
-    config WIFI_RETRY_ERROR_THRESHOLD
-        depends on WIFI_ENABLED
-        int "WiFi connection retry error threshold"
-        default 5
-        help
-            The number of connection retries before an error is thrown
+        config WIFI_TASK_PRIORITY
+            int "WiFi Task priority"
+            default 5
+    endmenu
 endmenu

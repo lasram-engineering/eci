@@ -7,6 +7,7 @@
             "includePath": [
                 "${config:idf.espIdfPath}/components/**",
                 "${config:idf.espIdfPathWin}/components/**",
+                "${workspaceFolder}/build/config",
                 "${workspaceFolder}/**"
             ],
             "browse": {
@@ -18,7 +19,7 @@
                 ],
                 "limitSymbolsToIncludedHeaders": false
             },
-            "compilerPath": " C:/MinGW/bin/gcc.exe"
+            "compilerPath": "${config:idf.toolsPathWin}\\tools\\xtensa-esp32-elf\\esp-12.2.0_20230208\\xtensa-esp32-elf\\bin\\xtensa-esp32-elf-gcc.exe"
         }
     ],
     "version": 4

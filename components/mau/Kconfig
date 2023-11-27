@@ -1,4 +1,8 @@
 menu "MAU Task Configuration"
+    config MAU_TASK_STACK_DEPTH
+        int "MAU Stack depth in WORDS"
+        default 4000
+
     config MAU_TASK_PRIO
         int "Task priority"
         default 15

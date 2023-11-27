@@ -2,7 +2,6 @@
 set(COMPONENT_REQUIRES )
 set(COMPONENT_PRIV_REQUIRES )
 
-set(COMPONENT_SRCS "main.c" "task_manager.c")
-set(COMPONENT_ADD_INCLUDEDIRS "include")
+set(COMPONENT_SRCS "main.c" )
 
 register_component()
