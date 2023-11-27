@@ -5,7 +5,7 @@
 #include <esp_http_client.h>
 #include <esp_log.h>
 
-#include "app_state.h"
+#include "wifi.h"
 
 #define FIWARE_IOTA_MEAS_QUERY "?i=" CONFIG_IOT_AGENT_DEVICE_ID "&k=" CONFIG_IOT_AGENT_APIKEY
 
@@ -56,7 +56,7 @@ esp_err_t
 fiware_iota_make_measurement(const char *payload, FiwareAccessToken_t *token, int *status_code)
 {
     // check if wifi is not connected
-    if (!app_state_get(STATE_TYPE_INTERNAL) & APP_STATE_INTERNAL_WIFI_CONNECTED)
+    if (!is_wifi_connected())
     {
         return ESP_ERR_INVALID_STATE;
     }

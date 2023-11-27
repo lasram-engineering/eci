@@ -2,15 +2,37 @@
 
 #include <string.h>
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/queue.h>
 #include <driver/uart.h>
 #include <esp_log.h>
+
+#include <freertos/FreeRTOS.h>
+#include <freertos/queue.h>
+#include <freertos/task.h>
 
 #include "uart.h"
 #include "task_intercom.h"
 
+#define MIN(a, b) ((a) < (b)) ? (a) : (b)
+
 static const char *TAG = "MAU";
+
+static TaskHandle_t mau_task_handle = NULL;
+
+esp_err_t mau_start_task()
+{
+    if (mau_task_handle != NULL)
+        return ESP_FAIL;
+
+    int ret = xTaskCreate(
+        mau_task,
+        TAG,
+        CONFIG_MAU_TASK_STACK_DEPTH,
+        NULL,
+        MIN(CONFIG_MAU_TASK_PRIO, configMAX_PRIORITIES - 1),
+        &mau_task_handle);
+
+    return ret == pdPASS ? ESP_OK : ESP_ERR_NO_MEM;
+}
 
 /**
  * Configuration for UART MAU

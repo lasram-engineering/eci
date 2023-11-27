@@ -1,131 +1,177 @@
 #include "wifi.h"
 
-#include <string.h>
+#include <esp_wifi.h>
+#include <esp_check.h>
+
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 #include <freertos/event_groups.h>
-#include <esp_system.h>
-#include <esp_wifi.h>
-#include <esp_event.h>
-#include <esp_log.h>
-#include <nvs_flash.h>
 
-#include <lwip/err.h>
-#include <lwip/sys.h>
+#define MIN(a, b) ((a) < (b)) ? (a) : (b)
 
-#include "app_state.h"
+// check the wifi task prio
+#if CONFIG_WIFI_TASK_PRIORITY >= configMAX_PRIORITIES
+#warning "WiFi Task priority is set higher than the maximum priority"
+#endif
 
-static const char *TAG = "WIFI";
+static const char *TAG = "WiFi";
 
-static int s_retry_count = 0;
+static TaskHandle_t wifi_task_handle = NULL;
+
+EventGroupHandle_t wifi_events = NULL;
 
 static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
-    if (event_base == WIFI_EVENT)
+    static int retries = 0;
+    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START)
     {
-        switch (event_id)
-        {
-        case WIFI_EVENT_STA_START: // wifi station mode started
-            // connect to station
-            esp_wifi_connect();
-            break;
-
-        case WIFI_EVENT_STA_CONNECTED: // connected to wifi
-            ESP_LOGI(TAG, "Connected to station");
-
-            // reset the error state
-            app_state_unset(STATE_TYPE_ERROR, APP_STATE_ERROR_WIFI_CONNECTION);
-
-            // reset the retry count
-            s_retry_count = 0;
-            break;
-
-        case WIFI_EVENT_STA_DISCONNECTED: // wifi disconnected
-            ESP_LOGI(TAG, "Disconnected from station, trying again...");
-            app_state_unset(STATE_TYPE_INTERNAL, APP_STATE_INTERNAL_WIFI_CONNECTED);
-
-            if (s_retry_count >= CONFIG_WIFI_RETRY_ERROR_THRESHOLD)
-            {
-                // after the max number of retries, set the wifi error state
-                app_state_set(STATE_TYPE_ERROR, APP_STATE_ERROR_WIFI_CONNECTION);
-            }
-
-            s_retry_count++;
-
-            esp_wifi_connect();
-            break;
-        default:
-            break;
-        }
+        esp_wifi_connect();
+        return;
     }
 
-    else if (event_base == IP_EVENT)
+    if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED)
     {
-        if (event_id == IP_EVENT_STA_GOT_IP)
-        {
-            ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
-            ESP_LOGI(TAG, "got ip:" IPSTR, IP2STR(&event->ip_info.ip));
+        ESP_LOGI(TAG, "Retrying to connect to station... (%d)", ++retries);
+        esp_wifi_connect();
+        return;
+    }
 
-            // set the bit to end the blocking wait
-            app_state_set(STATE_TYPE_INTERNAL, APP_STATE_INTERNAL_WIFI_CONNECTED);
-        }
+    if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP)
+    {
+        ip_event_got_ip_t *event = (ip_event_got_ip_t *)event_data;
+        ESP_LOGI(TAG, "Got IP: " IPSTR, IP2STR(&event->ip_info.ip));
+        retries = 0;
+        // set the event bits
+        xEventGroupSetBits(wifi_events, WIFI_CONNECTED);
+        return;
     }
 }
-void wifi_connect_to_station()
+
+void wifi_connect_to_station_task()
 {
-    ESP_LOGI(TAG, "Setting up WiFi in station mode");
+    int ret = ESP_OK;
 
-    // get the default handle for the net interface
-    esp_netif_t *netif_handle = NULL;
-
-    netif_handle = esp_netif_next(netif_handle);
-
-    // initialize net interface
     ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
     esp_netif_create_default_wifi_sta();
 
-    // create wifi config and initialize
-    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    wifi_init_config_t init_config = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_GOTO_ON_ERROR(
+        esp_wifi_init(&init_config),
+        exit_task,
+        TAG,
+        "Unable to initialize wifi");
 
-    // set the hostname of the device
-    esp_netif_set_hostname(netif_handle, CONFIG_WIFI_HOST);
+    // wifi is now initialized
+    xEventGroupSetBits(wifi_events, WIFI_INITIALIZED);
 
-    // create and register event handlers
-    esp_event_handler_instance_t instance_any_id;
-    esp_event_handler_instance_t instance_got_ip;
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
-                                                        ESP_EVENT_ANY_ID,
-                                                        &wifi_event_handler,
-                                                        NULL,
-                                                        &instance_any_id));
-    ESP_ERROR_CHECK(esp_event_handler_instance_register(IP_EVENT,
-                                                        IP_EVENT_STA_GOT_IP,
-                                                        &wifi_event_handler,
-                                                        NULL,
-                                                        &instance_got_ip));
-
-    // create custom wifi config
     wifi_config_t wifi_config = {
         .sta = {
-            .ssid = CONFIG_WIFI_SSID,
-            .password = CONFIG_WIFI_PASS,
-            /* Setting a password implies station will connect to all security modes including WEP/WPA.
-             * However these modes are deprecated and not advisable to be used. Incase your Access point
-             * doesn't support WPA2, these mode can be enabled by commenting below line */
-            .threshold.authmode = WIFI_AUTH_WPA2_PSK,
-        },
-    };
+            .ssid = CONFIG_WIFI_STATION_NAME,
+            .password = CONFIG_WIFI_STATION_PASSWORD,
+        }};
+
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
     ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
-    ESP_ERROR_CHECK(esp_wifi_start());
 
-    ESP_LOGI(TAG, "Station mode setup completed");
+    esp_event_handler_instance_t instance_wifi_any;
+    esp_event_handler_instance_t instance_ip_got_ip;
 
-    // wait until the connection flag WIFI_CONNECTED_BIT is set
-    // it is set in the wifi_event_handler function
-    app_state_wait_for_event(STATE_TYPE_INTERNAL, APP_STATE_INTERNAL_WIFI_CONNECTED);
+    ESP_ERROR_CHECK(
+        esp_event_handler_instance_register(
+            WIFI_EVENT,
+            ESP_EVENT_ANY_ID,
+            &wifi_event_handler,
+            NULL,
+            &instance_wifi_any));
 
-    /* The event will not be processed after unregister */
-    ESP_ERROR_CHECK(esp_event_handler_instance_unregister(IP_EVENT, IP_EVENT_STA_GOT_IP, instance_got_ip));
+    ESP_ERROR_CHECK(
+        esp_event_handler_instance_register(
+            IP_EVENT,
+            IP_EVENT_STA_GOT_IP,
+            &wifi_event_handler,
+            NULL,
+            &instance_ip_got_ip));
+
+    ESP_GOTO_ON_ERROR(
+        esp_wifi_start(),
+        exit_task,
+        TAG,
+        "Unable to start wifi");
+
+    // wait for the WIFI to connect
+    xEventGroupWaitBits(wifi_events, WIFI_CONNECTED, pdFALSE, pdTRUE, portMAX_DELAY);
+
+exit_task:
+    if (ret != ESP_OK)
+        ESP_LOGE(TAG, "Error code (%d) %s", ret, esp_err_to_name(ret));
+
+    vTaskDelete(NULL);
+}
+
+/**
+ * @brief Creates a task that tries to connect to the configured access point.
+ * If the task is already running the function returns.
+ *
+ * @return esp_err_t ESP_OK if the task has started successfully
+ * @return esp_err_t ESP_FAIL if the task could not start
+ */
+esp_err_t wifi_connect_to_station()
+{
+    // check if the task handle is set to NULL
+    if (wifi_task_handle != NULL)
+        return ESP_OK; // connection task is already running
+
+    if (wifi_events == NULL)
+        wifi_events = xEventGroupCreate();
+
+    if (wifi_events == NULL)
+        return ESP_ERR_NO_MEM;
+
+    // launch the wifi task
+    int ret = xTaskCreate(
+        wifi_connect_to_station_task,
+        TAG,
+        CONFIG_WIFI_TASK_STACK_DEPTH,
+        NULL,
+        MIN(configMAX_PRIORITIES - 1, CONFIG_WIFI_TASK_PRIORITY),
+        &wifi_task_handle);
+
+    return ret == pdPASS ? ESP_OK : ESP_FAIL;
+}
+
+bool is_wifi_initialized()
+{
+    if (wifi_events == NULL)
+        return false;
+
+    return xEventGroupGetBits(wifi_events) & WIFI_INITIALIZED;
+}
+
+bool is_wifi_connected()
+{
+    if (wifi_events == NULL)
+        return false;
+
+    return xEventGroupGetBits(wifi_events) & WIFI_CONNECTED;
+}
+
+esp_err_t wifi_wait_initialized(TickType_t ticks_to_wait)
+{
+    if (wifi_events == NULL)
+        return ESP_ERR_INVALID_STATE;
+
+    EventBits_t bits = xEventGroupWaitBits(wifi_events, WIFI_INITIALIZED, pdFALSE, pdTRUE, ticks_to_wait);
+
+    return bits & WIFI_INITIALIZED ? ESP_OK : ESP_ERR_TIMEOUT;
+}
+
+esp_err_t wifi_wait_connected(TickType_t ticks_to_wait)
+{
+    if (wifi_events == NULL)
+        return ESP_ERR_INVALID_STATE;
+
+    EventBits_t bits = xEventGroupWaitBits(wifi_events, WIFI_CONNECTED, pdFALSE, pdTRUE, ticks_to_wait);
+
+    return bits & WIFI_CONNECTED ? ESP_OK : ESP_ERR_TIMEOUT;
 }

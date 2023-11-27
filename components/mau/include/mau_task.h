@@ -1,5 +1,7 @@
 #pragma once
 
+#include <esp_err.h>
+
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
@@ -11,5 +13,7 @@
 #define UART_BUFFER_LEN 32
 /** Specifies the time after a timeout occurs while waiting for a read */
 #define UART_READ_TIMEOUT_MS 1000
+
+esp_err_t mau_start_task();
 
 void mau_task(void *arg);

@@ -7,13 +7,36 @@
 #include <esp_check.h>
 #include <esp_netif_sntp.h>
 
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+
 #include "iot_agent.h"
 #include "fiware_idm.h"
 
 #include "task_intercom.h"
-#include "app_state.h"
+#include "wifi.h"
+
+#define MIN(a, b) ((a) < (b)) ? (a) : (b)
 
 static const char *TAG = "FIWARE Task";
+
+static TaskHandle_t fiware_task_handle = NULL;
+
+esp_err_t fiware_start_task()
+{
+    if (fiware_task_handle != NULL)
+        return ESP_FAIL;
+
+    int ret = xTaskCreate(
+        fiware_task,
+        TAG,
+        CONFIG_FIWARE_TASK_STACK_DEPTH,
+        NULL,
+        MIN(CONFIG_FIWARE_TASK_PRIO, configMAX_PRIORITIES - 1),
+        &fiware_task_handle);
+
+    return ret == pdPASS ? ESP_OK : ESP_ERR_NO_MEM;
+}
 
 static const char *KW_PROGRAM_UPDATE = "update_program";
 
@@ -26,7 +49,7 @@ void fiware_task()
     int ret;
 
     // wait for wifi to be connected
-    app_state_wait_for_event(STATE_TYPE_INTERNAL, APP_STATE_INTERNAL_WIFI_CONNECTED);
+    wifi_wait_connected(portMAX_DELAY);
 
     // wait for network time to be synchronized
     ESP_LOGI(TAG, "Waiting for network time sync...");

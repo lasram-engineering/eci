@@ -3,18 +3,39 @@
 #include <string.h>
 #include <stdio.h>
 
-#include <freertos/FreeRTOS.h>
-#include <freertos/semphr.h>
-#include <driver/uart.h>
 #include <esp_log.h>
 #include <esp_check.h>
+#include <driver/uart.h>
 
-#include "app_state.h"
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/semphr.h>
+
 #include "kawasaki.h"
 #include "task_intercom.h"
 #include "mau_task.h"
 
-char *TAG = "UART";
+#define MIN(a, b) ((a) < (b)) ? (a) : (b)
+
+static const char *TAG = "UART";
+
+static TaskHandle_t uart_task_handle = NULL;
+
+esp_err_t uart_start_task()
+{
+    if (uart_task_handle != NULL)
+        return ESP_FAIL;
+
+    int ret = xTaskCreate(
+        uart_task,
+        TAG,
+        CONFIG_UART_TASK_STACK_DEPTH,
+        NULL,
+        MIN(CONFIG_UART_TASK_PRIO, configMAX_PRIORITIES - 1),
+        &uart_task_handle);
+
+    return ret == pdPASS ? ESP_OK : ESP_ERR_NO_MEM;
+}
 
 /**
  * Configuration for UART robot
