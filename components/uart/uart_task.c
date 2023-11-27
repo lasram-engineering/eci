@@ -9,7 +9,6 @@
 #include <esp_log.h>
 #include <esp_check.h>
 
-#include "app_state.h"
 #include "kawasaki.h"
 #include "task_intercom.h"
 #include "mau_task.h"

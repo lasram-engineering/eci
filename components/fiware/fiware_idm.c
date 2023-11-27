@@ -4,7 +4,7 @@
 
 #include <cJSON.h>
 
-#include "app_state.h"
+#include "wifi.h"
 
 #define FIWARE_IDM_URI "http://" CONFIG_FIWARE_HOST
 
@@ -156,10 +156,7 @@ esp_err_t fiware_idm_request_access_token_grant_type(FiwareAccessToken_t *token,
 esp_err_t fiware_idm_request_access_token(FiwareAccessToken_t *token)
 {
     // check if wifi is not connected
-    if (!app_state_get(STATE_TYPE_INTERNAL) & APP_STATE_INTERNAL_WIFI_CONNECTED)
-    {
-        return ESP_ERR_INVALID_STATE;
-    }
+    WIFI_RETURN_IF_NOT_CONNECTED(ESP_ERR_INVALID_STATE);
 
     return fiware_idm_request_access_token_grant_type(token, PASSWORD);
 }
@@ -167,10 +164,7 @@ esp_err_t fiware_idm_request_access_token(FiwareAccessToken_t *token)
 esp_err_t fiware_idm_renew_access_token(FiwareAccessToken_t *token)
 {
     // check if wifi is not connected
-    if (!app_state_get(STATE_TYPE_INTERNAL) & APP_STATE_INTERNAL_WIFI_CONNECTED)
-    {
-        return ESP_ERR_INVALID_STATE;
-    }
+    WIFI_RETURN_IF_NOT_CONNECTED(ESP_ERR_INVALID_STATE);
 
     return fiware_idm_request_access_token_grant_type(token, REFRESH);
 }

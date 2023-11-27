@@ -11,7 +11,7 @@
 #include "fiware_idm.h"
 
 #include "task_intercom.h"
-#include "app_state.h"
+#include "wifi.h"
 
 static const char *TAG = "FIWARE Task";
 
@@ -26,7 +26,7 @@ void fiware_task()
     int ret;
 
     // wait for wifi to be connected
-    app_state_wait_for_event(STATE_TYPE_INTERNAL, APP_STATE_INTERNAL_WIFI_CONNECTED);
+    wifi_wait_connected(portMAX_DELAY);
 
     // wait for network time to be synchronized
     ESP_LOGI(TAG, "Waiting for network time sync...");
