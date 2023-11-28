@@ -20,9 +20,6 @@ esp_err_t get_handler(httpd_req_t *request)
     return ESP_OK;
 }
 
-static char payload[CONFIG_HTTP_SERVER_PAYLOAD_LEN];
-static fiware_iota_command_t incoming_command;
-
 /**
  * @brief Handles incoming POST requests from the FIWARE IoT Agent
  *
@@ -31,18 +28,21 @@ static fiware_iota_command_t incoming_command;
  */
 esp_err_t api_post_handler(httpd_req_t *request)
 {
-    // reset payload
-    payload[0] = '\0';
+    // allocate the payload buffer
+    size_t payload_buffer_size = request->content_len + 1;
+    char *payload = (char *)calloc(sizeof(char), payload_buffer_size);
 
-    if (CONFIG_HTTP_SERVER_PAYLOAD_LEN <= request->content_len)
+    // check if the allocation was successful
+    if (payload == NULL)
     {
-        ESP_LOGI(TAG, "Incoming POST payload too large %d vs %d", CONFIG_HTTP_SERVER_PAYLOAD_LEN, request->content_len);
+        ESP_LOGI(TAG, "Incoming POST payload too large: %d", request->content_len);
         // send back an error message
         httpd_resp_send_err(request, HTTPD_400_BAD_REQUEST, "Payload too large");
         return ESP_FAIL;
     }
 
-    int ret = httpd_req_recv(request, payload, sizeof(payload));
+    // receive the data
+    int ret = httpd_req_recv(request, payload, request->content_len);
 
     if (ret <= 0)
     {
@@ -53,50 +53,59 @@ esp_err_t api_post_handler(httpd_req_t *request)
             httpd_resp_send_408(request);
         }
 
+        free(payload);
+
         return ESP_FAIL;
     }
 
     ESP_LOGI(TAG, "Got command: %s", payload);
 
-    // parse the payload
-    ret = fiware_iota_parse_command(payload, &incoming_command);
+    // allocate a new message
+    itc_message_t *message = task_intercom_message_create();
+    // initialize the message
+    task_intercom_message_init(message);
 
-    if (ret == ESP_FAIL)
+    // set the payload to the message
+    message->payload = strdup(payload);
+
+    char *response = NULL;
+
+    if (message->payload == NULL)
     {
-        httpd_resp_send_err(request, HTTPD_400_BAD_REQUEST, "Could not parse command");
+        fiware_iota_command_make_response(payload, "NO MEM", &response);
+        httpd_resp_send(request, response, HTTPD_RESP_USE_STRLEN);
+
+        // message could not be added to the queue, free the resource
+        task_intercom_message_delete(message);
+
+        // free the allocated resources
+        free(payload);
         return ESP_OK;
     }
-
-    if (ret == ESP_ERR_INVALID_ARG)
-    {
-        httpd_resp_send_err(request, HTTPD_400_BAD_REQUEST, "Invalid arguments");
-        return ESP_OK;
-    }
-
-    if (ret == ESP_ERR_INVALID_SIZE)
-    {
-        httpd_resp_send_err(request, HTTPD_400_BAD_REQUEST, "Command name or payload too large");
-        return ESP_OK;
-    }
-
-    ESP_LOGI(TAG, "Command was valid");
 
     // send the command to the fiware task
-    ret = xQueueSend(task_intercom_fiware_command_queue, &incoming_command, 0);
-    httpd_resp_set_type(request, "text/plain");
+    ret = xQueueSend(task_intercom_fiware_command_queue, &message, 0);
 
     if (ret == pdTRUE)
     {
-        fiware_iota_make_command_response(incoming_command.command_name, CONFIG_IOT_AGENT_COMMAND_INIT_RESPONSE, payload, CONFIG_HTTP_SERVER_PAYLOAD_LEN);
-        httpd_resp_send(request, payload, HTTPD_RESP_USE_STRLEN);
+        // command appended to queue, send back default success message
+        fiware_iota_command_make_response(payload, CONFIG_IOT_AGENT_COMMAND_INIT_RESPONSE, &response);
+        httpd_resp_send(request, response, HTTPD_RESP_USE_STRLEN);
     }
-
     else
     {
+        // command queue full, send back BUSY
+        fiware_iota_command_make_response(payload, "BUSY", &response);
+        httpd_resp_send(request, response, HTTPD_RESP_USE_STRLEN);
 
-        fiware_iota_make_command_response(incoming_command.command_name, "BUSY", payload, CONFIG_HTTP_SERVER_PAYLOAD_LEN);
-        httpd_resp_send_err(request, HTTPD_400_BAD_REQUEST, payload);
+        // message could not be added to the queue, free the resource
+        task_intercom_message_delete(message);
     }
+
+    // free the allocated resources
+    free(payload);
+    if (response != NULL)
+        free(response);
 
     return ESP_OK;
 }
@@ -115,8 +124,7 @@ httpd_uri_t uri_api_post = {
     .user_ctx = NULL,
 };
 
-httpd_handle_t
-start_http_server()
+httpd_handle_t start_http_server()
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
 

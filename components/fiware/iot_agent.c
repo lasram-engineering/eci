@@ -52,8 +52,7 @@ static const esp_http_client_config_t measurement_config = {
  * @return esp_err_t    ESP_OK if the operation was successful,
  *                      ESP_ERR_INVALID_STATE if wifi connection is not available
  */
-esp_err_t
-fiware_iota_make_measurement(const char *payload, FiwareAccessToken_t *token, int *status_code)
+esp_err_t fiware_iota_make_measurement(const char *payload, FiwareAccessToken_t *token, int *status_code)
 {
     // check if wifi is not connected
     if (!is_wifi_connected())
@@ -123,105 +122,183 @@ fiware_iota_make_measurement(const char *payload, FiwareAccessToken_t *token, in
     return ESP_OK;
 }
 
-/**
- * @brief Parses UltraLight 2.0 commands from the IoT Agent
- *
- * @param raw_command the raw command string to parse
- * @param command the command type to load the values into
- * @return esp_err_t    ESP_ERR_INVALID_ARG if the command contained illegal fields
- *                      ESP_FAIL if the command could not be parsed
- *                      ESP_ERR_INVALID_SIZE if the command name or payload was too large
- */
-esp_err_t fiware_iota_parse_command(char *raw_command, fiware_iota_command_t *command)
+esp_err_t fiware_iota_command_get_command_name(const char *raw_command, char **command_name)
 {
-    // * command syntax: <device_id>@<command_name>|<param1>|<param2>|...
+    char *command = strdup(raw_command);
 
-    // retrieve the token before the @ symbol
-    char *token = strtok(raw_command, "@");
+    if (command == NULL)
+        return ESP_ERR_NO_MEM;
 
-    // if the token is not found, the command is invalid
-    if (token == NULL)
+    // gets the device name and command name
+    char *header = strtok(command, "|");
+
+    if (header == NULL)
     {
-        ESP_LOGI(TAG, "Invalid command syntax: %s", raw_command);
+        free(command);
         return ESP_FAIL;
     }
 
-    // check if the device id matches with the config device id
-    if (strcmp(token, CONFIG_IOT_AGENT_DEVICE_ID) != 0)
-    {
-#ifdef CONFIG_IOT_AGENT_COMMAND_STRICT
-        ESP_LOGE(TAG, "Incoming command device id does not match stored id: '%s' vs '%s'", token, CONFIG_IOT_AGENT_DEVICE_ID);
-        return ESP_ERR_INVALID_ARG;
-#else
-        ESP_LOGW(TAG, "Incoming command device id does not match stored id: '%s' vs '%s'", token, CONFIG_IOT_AGENT_DEVICE_ID);
-#endif
-    }
+    // gets the device name
+    strtok(header, "@");
 
-    // check the first token before the pipe symbol (command name)
-    token = strtok(NULL, "|");
+    // gets the command name (remaining)
+    char *token = strtok(NULL, "");
 
     if (token == NULL)
     {
-        ESP_LOGI(TAG, "Invalid command syntax: %s", raw_command);
+        free(command);
         return ESP_FAIL;
     }
 
-    int token_len = strlen(token);
+    *command_name = strdup(token);
+    free(command);
 
-    // check if the token fits in the allocated buffer
-    if (token_len >= CONFIG_IOT_AGENT_COMMAND_NAME_LEN)
+    if (*command_name == NULL)
     {
-        ESP_LOGE(TAG, "Command name too long: %s (%d > %d)", token, token_len, CONFIG_IOT_AGENT_COMMAND_NAME_LEN);
-        return ESP_ERR_INVALID_SIZE;
+        return ESP_ERR_NO_MEM;
     }
-
-    // copy the command name into the buffer
-    strcpy(command->command_name, token);
-
-    // load the payload
-    token = strtok(NULL, "|");
-
-    if (token == NULL)
-    {
-        ESP_LOGI(TAG, "Invalid command syntax: %s", raw_command);
-        return ESP_FAIL;
-    }
-
-    token_len = strlen(token);
-
-    if (token_len >= CONFIG_IOT_AGENT_COMMAND_PAYLOAD_LEN)
-    {
-        ESP_LOGE(TAG, "Command payload too long: %s (%d > %d)", token, token_len, CONFIG_IOT_AGENT_COMMAND_PAYLOAD_LEN);
-        return ESP_ERR_INVALID_SIZE;
-    }
-
-    // copy the payload into the buffer
-    strcpy(command->command_param, token);
 
     return ESP_OK;
 }
 
-esp_err_t fiware_iota_make_command_response(const char *command_name, const char *result, char *buffer, int buffer_len)
+esp_err_t fiware_iota_command_get_device_name(const char *raw_command, char **device_name)
 {
-    // check if the buffer is long enough
-    // the +3 is for the @ and | and the trailing zero
-    if (strlen(CONFIG_IOT_AGENT_DEVICE_ID) + strlen(command_name) + strlen(result) + 3 >= buffer_len)
+    // allocate a copy of the
+    char *command = strdup(raw_command);
+
+    if (command == NULL)
+        return ESP_ERR_NO_MEM;
+
+    // gets the device name and command name
+    char *header = strtok(command, "|");
+
+    if (header == NULL)
+    {
+        free(command);
         return ESP_FAIL;
+    }
 
-    // copy the device id
-    strcpy(buffer, CONFIG_IOT_AGENT_DEVICE_ID);
+    // gets the device name
+    char *token = strtok(header, "@");
 
-    // copy the @ symbol
-    strcat(buffer, "@");
+    if (token == NULL)
+    {
+        free(command);
+        return ESP_FAIL;
+    }
 
-    // copy the command name
-    strcat(buffer, command_name);
+    *device_name = strdup(token);
+    free(command);
 
-    // copy the pipe symbol
-    strcat(buffer, "|");
+    if (device_name == NULL)
+    {
+        return ESP_ERR_NO_MEM;
+    }
 
-    // copy the buffer
-    strcat(buffer, result);
+    return ESP_OK;
+}
+
+esp_err_t fiware_iota_command_get_params(const char *raw_command, char ***params, uint8_t *param_num)
+{
+    char *command = strdup(raw_command);
+
+    if (command == NULL)
+        return ESP_ERR_NO_MEM;
+
+    // first token is the header
+    char *token = strtok(command, "|");
+
+    if (token == NULL)
+    {
+        free(command);
+        return ESP_FAIL;
+    }
+
+    // get the params
+    token = strtok(NULL, "");
+
+    *params = (char **)malloc(sizeof(char *));
+
+    *param_num = 0;
+
+    while (token != NULL)
+    {
+        // append the token into the params list
+        // allocate the memory and copy the string
+        (*params)[*param_num] = strdup(token);
+
+        // check if the memory allocation was successful
+        if (*(params)[*param_num] == NULL)
+        {
+            abort(); // TODO add proper freeing
+        }
+
+        // increment the parameter count
+        (*param_num)++;
+
+        token = strtok(NULL, "|");
+    }
+
+    return ESP_OK;
+}
+
+esp_err_t fiware_iota_command_get_param_string(const char *raw_command, char **param_string)
+{
+    char *command = strdup(raw_command);
+
+    if (command == NULL)
+        return ESP_ERR_NO_MEM;
+
+    // first token is the header
+    char *token = strtok(command, "|");
+
+    if (token == NULL)
+    {
+        free(command);
+        return ESP_FAIL;
+    }
+
+    // get the params
+    token = strtok(NULL, "");
+
+    *param_string = strdup(token);
+
+    free(command);
+
+    if (param_string == NULL)
+        return ESP_ERR_NO_MEM;
+
+    return ESP_OK;
+}
+
+/**
+ * @brief Makes a response for the FIWARE UltraLight 2.0 command
+ *
+ * @param raw_command the raw command payload -> <device_id>@<command>|<param1>|<param2>
+ * @param response the response to the command
+ * @param response_formatted pointer to a char array of the response. User is expected to free it after usage
+ * @return esp_err_t
+ */
+esp_err_t fiware_iota_command_make_response(const char *raw_command, const char *response, char **response_formatted)
+{
+    char *command = (char *)malloc(sizeof(char) * (strlen(raw_command) + 1));
+
+    if (command == NULL)
+        return ESP_ERR_NO_MEM;
+
+    strcpy(command, raw_command);
+
+    char *header = strtok(command, "|");
+
+    int ret = asprintf(response_formatted, "%s|%s", header, response);
+
+    // header is copied into response_formatted, free command
+    free(command);
+
+    if (ret == -1)
+    {
+        return ESP_ERR_NO_MEM;
+    }
 
     return ESP_OK;
 }

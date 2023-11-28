@@ -1,6 +1,7 @@
 #include "task_intercom.h"
 
 #include <string.h>
+#include <time.h>
 
 #include <esp_log.h>
 #include <esp_check.h>
@@ -36,7 +37,7 @@ esp_err_t task_intercom_init()
 
     ESP_RETURN_ON_FALSE(task_intercom_fiware_measurement_queue != NULL, ESP_FAIL, TAG, "Insufficient memory to allocate IoT Measurement queue");
 
-    task_intercom_fiware_command_queue = xQueueCreate(CONFIG_ITC_IOTA_COMMAND_QUEUE_SIZE, sizeof(fiware_iota_command_t));
+    task_intercom_fiware_command_queue = xQueueCreate(CONFIG_ITC_IOTA_COMMAND_QUEUE_SIZE, sizeof(itc_message_t));
 
     ESP_RETURN_ON_FALSE(task_intercom_fiware_command_queue != NULL, ESP_FAIL, TAG, "Insufficient memory to allocate IoT Command queue");
 
@@ -50,6 +51,9 @@ esp_err_t task_intercom_init()
  */
 void task_intercom_message_delete(itc_message_t *message)
 {
+    if (message == NULL)
+        return;
+
     if (message->payload != NULL)
         free(message->payload);
     if (message->response != NULL)
@@ -99,7 +103,9 @@ itc_message_t *task_intercom_message_copy(itc_message_t *message)
  */
 void task_intercom_message_init(itc_message_t *message)
 {
-    message->message_id = 0;
+    time_t now;
+    time(&now);
+    message->message_id = now;
     message->payload = NULL;
     message->response = NULL;
     message->response_static = NULL;

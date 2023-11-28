@@ -52,6 +52,67 @@ const uart_port_t uart_robot = UART_NUM_1;
 QueueHandle_t uart_queue_robot;
 
 /**
+ * @brief Processes incoming messages from the UART queue
+ *
+ */
+esp_err_t process_incoming_messages(char **payload)
+{
+    itc_message_t *incoming_message;
+
+    int ret = xQueueReceive(task_intercom_uart_queue, &incoming_message, 0);
+
+    // return if there is no message in the queue
+    if (ret == pdFALSE)
+        return ESP_ERR_NOT_FOUND;
+
+#ifdef CONFIG_IOT_AGENT_REMOTE_COMMANDS
+    if (incoming_message->message_id == IOT_AGENT_REMOTE_COMMAND_ID)
+    {
+        *payload = strdup(incoming_message->payload);
+
+        task_intercom_message_delete(incoming_message);
+        return ESP_OK;
+    }
+#endif
+
+    if (incoming_message->response == NULL && incoming_message->response_static == NULL)
+        return ESP_ERR_INVALID_ARG;
+
+    const char *response = incoming_message->response != NULL ? incoming_message->response : incoming_message->response_static;
+
+    ESP_LOGI(TAG, "Sending message to robot: (ID: %ld) %s", incoming_message->message_id, response);
+
+    // check if the incoming message is an error message
+    ret = kawasaki_make_response(uart_robot, incoming_message);
+
+    switch (ret)
+    {
+    case ESP_FAIL:
+        ESP_LOGW(TAG, "Transmission failed: %s", response);
+        break;
+
+    case ESP_ERR_INVALID_RESPONSE:
+        ESP_LOGW(TAG, "Invalid response to: %s", response);
+        break;
+
+    case ESP_ERR_NOT_FINISHED:
+        ESP_LOGW(TAG, "Possible ENQ collision during sending %s", response);
+        break;
+
+    case ESP_ERR_TIMEOUT:
+        ESP_LOGW(TAG, "Message timed out: %s", response);
+        break;
+
+    default:
+        break;
+    }
+
+    task_intercom_message_delete(incoming_message);
+
+    return ret;
+}
+
+/**
  * @brief Manages communication with the Kawasaki Controller and responds to messages and errors from the MAU task
  *
  * @param arg TaskHandle_t* pointer to the task handle object of the MAU task
@@ -98,9 +159,13 @@ void uart_task(void *arg)
 
         if (ret == ESP_ERR_TIMEOUT)
         {
-            process_incoming_messages();
+            ret = process_incoming_messages(&payload);
 
-            continue;
+            if (ret != ESP_OK && ret != ESP_ERR_NOT_FOUND)
+                ESP_LOGW(TAG, "Unable to process outgoing message: %s", esp_err_to_name(ret));
+
+            if (payload == NULL)
+                continue;
         }
 
         if (ret == ESP_OK)
