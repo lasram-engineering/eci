@@ -13,6 +13,9 @@
 
 #include "kawasaki.h"
 #include "task_intercom.h"
+#ifdef CONFIG_IOT_AGENT_REMOTE_COMMANDS
+#include "iot_agent.h"
+#endif
 
 #define MIN(a, b) ((a) < (b)) ? (a) : (b)
 
@@ -59,7 +62,7 @@ esp_err_t process_incoming_messages(char **payload)
 {
     itc_message_t *incoming_message;
 
-    int ret = xQueueReceive(task_intercom_uart_queue, &incoming_message, 0);
+    int ret = xQueueReceive(task_itc_to_uart_queue, &incoming_message, 0);
 
     // return if there is no message in the queue
     if (ret == pdFALSE)
@@ -230,55 +233,4 @@ void uart_task(void *arg)
         const char *error = esp_err_to_name(ret);
         ESP_LOGE(TAG, "An error occurred: %d -> %s", ret, error);
     }
-}
-
-/**
- * @brief Processes incoming messages from the UART queue
- *
- */
-esp_err_t process_incoming_messages()
-{
-    itc_message_t *incoming_message;
-
-    int ret = xQueueReceive(task_itc_to_uart_queue, &incoming_message, 0);
-
-    // return if there is no message in the queue
-    if (ret == pdFALSE)
-        return ESP_ERR_NOT_FOUND;
-
-    if (incoming_message->response == NULL && incoming_message->response_static == NULL)
-        return ESP_ERR_INVALID_ARG;
-
-    const char *response = incoming_message->response != NULL ? incoming_message->response : incoming_message->response_static;
-
-    ESP_LOGI(TAG, "Sending message to robot: (ID: %ld) %s", incoming_message->message_id, response);
-
-    // check if the incoming message is an error message
-    ret = kawasaki_make_response(uart_robot, incoming_message);
-
-    switch (ret)
-    {
-    case ESP_FAIL:
-        ESP_LOGW(TAG, "Transmission failed: %s", response);
-        break;
-
-    case ESP_ERR_INVALID_RESPONSE:
-        ESP_LOGW(TAG, "Invalid response to: %s", response);
-        break;
-
-    case ESP_ERR_NOT_FINISHED:
-        ESP_LOGW(TAG, "Possible ENQ collision during sending %s", response);
-        break;
-
-    case ESP_ERR_TIMEOUT:
-        ESP_LOGW(TAG, "Message timed out: %s", response);
-        break;
-
-    default:
-        break;
-    }
-
-    task_intercom_message_delete(incoming_message);
-
-    return ret;
 }

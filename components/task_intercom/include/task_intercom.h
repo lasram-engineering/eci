@@ -36,12 +36,12 @@ extern QueueHandle_t task_intercom_fiware_command_queue;
 
 esp_err_t task_intercom_init();
 
-void task_intercom_message_delete(itc_message_t *message);
-
 itc_message_t *task_intercom_message_create();
 
-itc_message_t *task_intercom_message_copy(itc_message_t *message);
-
 void task_intercom_message_init(itc_message_t *message);
+
+esp_err_t task_itc_message_add_token(itc_message_t *message, char *token);
+
+void task_intercom_message_delete(itc_message_t *message);
 
 bool task_intercom_message_is_empty(itc_message_t *message);

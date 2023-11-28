@@ -45,24 +45,6 @@ esp_err_t task_intercom_init()
 }
 
 /**
- * @brief Deletes a heap-allocated ITC message
- *
- * @param message the message pointer to be deleted
- */
-void task_intercom_message_delete(itc_message_t *message)
-{
-    if (message == NULL)
-        return;
-
-    if (message->payload != NULL)
-        free(message->payload);
-    if (message->response != NULL)
-        free(message->response);
-
-    free(message);
-}
-
-/**
  * @brief Allocates a message on the stack
  * @note The fields of the struct need to be allocated separately
  *
@@ -71,29 +53,6 @@ void task_intercom_message_delete(itc_message_t *message)
 itc_message_t *task_intercom_message_create()
 {
     return (itc_message_t *)malloc(sizeof(itc_message_t));
-}
-
-itc_message_t *task_intercom_message_copy(itc_message_t *message)
-{
-    itc_message_t *copy = task_intercom_message_create();
-
-    // allocate the fields
-    copy->payload = (char *)malloc(sizeof(char) * (strlen(message->payload) + 1));
-    copy->response = (char *)malloc(sizeof(char) * (strlen(message->payload) + 1));
-
-    if (message->payload != NULL)
-        strcpy(copy->payload, message->payload);
-
-    if (message->response != NULL)
-        strcpy(copy->response, message->response);
-
-    if (message->response_static != NULL)
-        copy->response_static = message->response_static;
-
-    copy->message_id = message->message_id;
-    copy->is_measurement = message->is_measurement;
-
-    return copy;
 }
 
 /**
@@ -107,9 +66,61 @@ void task_intercom_message_init(itc_message_t *message)
     time(&now);
     message->message_id = now;
     message->payload = NULL;
+    message->payload_tokenized = NULL;
+    message->tokens = NULL;
+    message->token_num = 0;
     message->response = NULL;
     message->response_static = NULL;
     message->is_measurement = false;
+}
+
+esp_err_t task_itc_message_add_token(itc_message_t *message, char *token)
+{
+    if (message->token_num == 0)
+        message->tokens = (char **)malloc(sizeof(char *));
+
+    else
+    {
+        char **allocated = (char **)realloc(message->tokens, sizeof(char *) * (message->token_num + 1));
+
+        if (allocated == NULL)
+            return ESP_ERR_NO_MEM;
+
+        message->tokens = allocated;
+    }
+
+    message->tokens[message->token_num] = token;
+    message->token_num++;
+
+    return ESP_OK;
+}
+
+/**
+ * @brief Deletes a heap-allocated ITC message
+ *
+ * @param message the message pointer to be deleted
+ */
+void task_intercom_message_delete(itc_message_t *message)
+{
+    if (message == NULL)
+        return;
+
+    // free the payload
+    if (message->payload != NULL)
+        free(message->payload);
+
+    // free the payload copy holding the tokens
+    if (message->payload_tokenized != NULL)
+        free(message->payload_tokenized);
+
+    // free the array holding the pointers to the tokens
+    if (message->tokens != NULL)
+        free(message->tokens);
+
+    if (message->response != NULL)
+        free(message->response);
+
+    free(message);
 }
 
 /**

@@ -139,7 +139,7 @@ cleanup:
     }
     else
     {
-        xQueueSend(task_intercom_uart_queue, &uart_message, portMAX_DELAY);
+        xQueueSend(task_itc_to_uart_queue, &uart_message, portMAX_DELAY);
     }
 
     return ret;
