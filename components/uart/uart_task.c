@@ -13,7 +13,6 @@
 
 #include "kawasaki.h"
 #include "task_intercom.h"
-#include "mau_task.h"
 
 #define MIN(a, b) ((a) < (b)) ? (a) : (b)
 
@@ -143,7 +142,7 @@ void uart_task(void *arg)
             if (message->is_measurement)
                 ret = xQueueSend(task_intercom_fiware_measurement_queue, (void *)&message, 0);
             else
-                ret = xQueueSend(task_intercom_mau_queue, (void *)&message, 0);
+                ret = xQueueSend(task_itc_from_uart_queue, (void *)&message, 0);
 
             // check if the message was added to the queue
             if (ret == errQUEUE_FULL)
@@ -176,7 +175,7 @@ esp_err_t process_incoming_messages()
 {
     itc_message_t *incoming_message;
 
-    int ret = xQueueReceive(task_intercom_uart_queue, &incoming_message, 0);
+    int ret = xQueueReceive(task_itc_to_uart_queue, &incoming_message, 0);
 
     // return if there is no message in the queue
     if (ret == pdFALSE)

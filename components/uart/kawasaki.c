@@ -89,6 +89,7 @@ esp_err_t kawasaki_read_transmission_payload(uart_port_t port, char *buffer, con
  *  ESP_FAIL if there was an error,
  *  ESP_TIMEOUT if there was a timeout
  *  ESP_ERR_INVALID_RESPONSE if the response was invalid
+ * @deprecated use kawasaki_read_transmission
  */
 esp_err_t kawasaki_read_transmission_preallocated(uart_port_t port, char *buffer, const int buffer_length, TickType_t ticks_to_wait)
 {
@@ -364,8 +365,9 @@ esp_err_t kawasaki_write_transmission(uart_port_t port, const char *payload)
 }
 
 #define KAWASAKI_TRANSMISSION_TYPE_POSTFIX ":"
-#define KAWASAKI_TRANSMISSION_ID_POSTFIX "@"
+#define KAWASAKI_TRANSMISSION_HEADER_POSTFIX "@"
 #define KAWASAKI_TRANSMISSION_ID_CHAR '#'
+#define KAWASAKI_PAYLOAD_SEPARATOR "|"
 
 #define KAWASAKI_TRANSMISSION_TYPE_MEASUREMENT "MEASUREMENT"
 #define KAWASAKI_TRANSMISSION_TYPE_COMMAND "COMMAND"
@@ -393,11 +395,10 @@ esp_err_t kawasaki_parse_transmission(const char *raw, itc_message_t **message)
         return ESP_ERR_INVALID_ARG;
 
     // copy the payload string
-    char *transmission = (char *)malloc(sizeof(char) * (strlen(raw) + 1));
-    strcpy(transmission, raw);
+    char *transmission = strdup(raw);
 
     // separate the header and payload
-    char *header = strtok(transmission, KAWASAKI_TRANSMISSION_ID_POSTFIX);
+    char *header = strtok(transmission, KAWASAKI_TRANSMISSION_HEADER_POSTFIX);
     char *payload = strtok(NULL, "");
 
     // check if the header starts with the '#' symbol
@@ -424,13 +425,21 @@ esp_err_t kawasaki_parse_transmission(const char *raw, itc_message_t **message)
         return ESP_FAIL;
     }
 
-    // allocate the payload of the message
-    char *payload_allocated = (char *)malloc(sizeof(char) * (strlen(payload) + 1));
-    // copy the payload from the token
-    strcpy(payload_allocated, payload);
-
-    (*message)->payload = payload_allocated;
+    (*message)->payload = strdup(payload);
+    (*message)->payload_tokenized = strdup(payload);
     (*message)->message_id = id;
+
+    // get the tokens
+    char *token = strtok((*message)->payload_tokenized, KAWASAKI_PAYLOAD_SEPARATOR);
+
+    while (token != NULL)
+    {
+        (*message)->tokens[(*message)->token_num] = token;
+
+        (*message)->token_num++;
+
+        token = strtok(NULL, KAWASAKI_PAYLOAD_SEPARATOR);
+    }
 
     // check the transmission type
     if (strncmp(transmission_type, KAWASAKI_TRANSMISSION_TYPE_COMMAND, MIN(strlen(KAWASAKI_TRANSMISSION_TYPE_COMMAND), strlen(transmission_type))) == 0)

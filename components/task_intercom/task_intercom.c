@@ -5,11 +5,13 @@
 #include <esp_log.h>
 #include <esp_check.h>
 
+#include "iot_agent.h"
+
 static const char *TAG = "ITC";
 
-QueueHandle_t task_intercom_uart_queue = NULL;
+QueueHandle_t task_itc_to_uart_queue = NULL;
 
-QueueHandle_t task_intercom_mau_queue = NULL;
+QueueHandle_t task_itc_from_uart_queue = NULL;
 
 QueueHandle_t task_intercom_fiware_measurement_queue = NULL;
 
@@ -22,13 +24,13 @@ QueueHandle_t task_intercom_fiware_command_queue = NULL;
  */
 esp_err_t task_intercom_init()
 {
-    task_intercom_uart_queue = xQueueCreate(CONFIG_ITC_UART_QUEUE_SIZE, sizeof(itc_message_t));
+    task_itc_to_uart_queue = xQueueCreate(CONFIG_ITC_UART_QUEUE_SIZE, sizeof(itc_message_t));
 
-    ESP_RETURN_ON_FALSE(task_intercom_uart_queue != NULL, ESP_FAIL, TAG, "Insufficient memory to allocate UART queue");
+    ESP_RETURN_ON_FALSE(task_itc_to_uart_queue != NULL, ESP_FAIL, TAG, "Insufficient memory to allocate UART queue");
 
-    task_intercom_mau_queue = xQueueCreate(CONFIG_ITC_MAU_QUEUE_SIZE, sizeof(itc_message_t));
+    task_itc_from_uart_queue = xQueueCreate(CONFIG_ITC_MAU_QUEUE_SIZE, sizeof(itc_message_t));
 
-    ESP_RETURN_ON_FALSE(task_intercom_mau_queue != NULL, ESP_FAIL, TAG, "Insufficient memory to allocate MAU queue");
+    ESP_RETURN_ON_FALSE(task_itc_from_uart_queue != NULL, ESP_FAIL, TAG, "Insufficient memory to allocate MAU queue");
 
     task_intercom_fiware_measurement_queue = xQueueCreate(CONFIG_ITC_IOTA_MEASUREMENT_QUEUE_SIZE, sizeof(itc_message_t));
 

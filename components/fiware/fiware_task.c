@@ -83,7 +83,7 @@ void fiware_task()
                 incoming_measurement->response_static = "NO WIFI";
 
             // send the command back to the UART task
-            xQueueSend(task_intercom_uart_queue, &fiware_command_out, portMAX_DELAY);
+            xQueueSend(task_itc_to_uart_queue, &fiware_command_out, portMAX_DELAY);
 
             continue;
         }
@@ -110,7 +110,7 @@ void fiware_task()
             asprintf(&fiware_command_out->response, "PROGRAM|%s", fiware_incoming_command.command_param);
 
             // send the response to the UART task (will wait forever)
-            xQueueSend(task_intercom_uart_queue, &fiware_command_out, portMAX_DELAY);
+            xQueueSend(task_itc_to_uart_queue, &fiware_command_out, portMAX_DELAY);
         }
     }
 }
