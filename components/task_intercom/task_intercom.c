@@ -8,6 +8,8 @@
 
 #include "iot_agent.h"
 
+#define MIN(a, b) ((a) < (b)) ? (a) : (b)
+
 static const char *TAG = "ITC";
 
 QueueHandle_t task_itc_to_uart_queue = NULL;
@@ -93,6 +95,16 @@ esp_err_t task_itc_message_add_token(itc_message_t *message, char *token)
     message->token_num++;
 
     return ESP_OK;
+}
+
+esp_err_t task_itc_message_token_match(itc_message_t *message, int token_num, const char *match)
+{
+    if (token_num >= message->token_num)
+        return ESP_ERR_INVALID_ARG;
+
+    uint8_t ret = strncmp(message->tokens[token_num], match, MIN(strlen(message->tokens[token_num]), strlen(match)));
+
+    return ret == 0 ? ESP_OK : ESP_FAIL;
 }
 
 /**

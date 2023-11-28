@@ -6,7 +6,6 @@
     "files.associations": {
         "*.sdf": "xml",
         "*.urdf": "xml",
-        "*.cps": "javascript",
-        "esp_http_server.h": "c"
+        "*.cps": "javascript"
     }
 }

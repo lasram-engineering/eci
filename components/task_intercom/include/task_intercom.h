@@ -42,6 +42,8 @@ void task_intercom_message_init(itc_message_t *message);
 
 esp_err_t task_itc_message_add_token(itc_message_t *message, char *token);
 
+esp_err_t task_itc_message_token_match(itc_message_t *message, int token_num, const char *match);
+
 void task_intercom_message_delete(itc_message_t *message);
 
 bool task_intercom_message_is_empty(itc_message_t *message);

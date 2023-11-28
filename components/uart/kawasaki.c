@@ -416,8 +416,8 @@ esp_err_t kawasaki_parse_transmission(const char *raw, itc_message_t **message)
     if (id_string == NULL)
         return ESP_FAIL;
 
-    // convert the id to integer starting from the second character
-    uint16_t id = atoi(id_string + 1);
+    // convert the id to integer
+    uint16_t id = atoi(id_string);
 
     if (id == 0)
     {
@@ -434,9 +434,7 @@ esp_err_t kawasaki_parse_transmission(const char *raw, itc_message_t **message)
 
     while (token != NULL)
     {
-        (*message)->tokens[(*message)->token_num] = token;
-
-        (*message)->token_num++;
+        task_itc_message_add_token(*message, token);
 
         token = strtok(NULL, KAWASAKI_PAYLOAD_SEPARATOR);
     }
