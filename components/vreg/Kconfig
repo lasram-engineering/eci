@@ -1,0 +1,42 @@
+menu "Voltage Regulator"
+    config VREG_ENABLED
+        bool "Voltage regulator enabled"
+        default true
+
+    config VREG_BAUD
+        int "Voltage regulator UART Baudrate"
+        default 9600
+
+    config VREG_RX_PIN
+        int "RX Pin"
+        default 16
+
+    config VREG_TX_PIN
+        int "TX Pin"
+        default 4
+
+    config VREG_RX_BUFFER_SIZE
+        int "RX buffer size"
+        default 1024
+
+    config VREG_TX_BUFFER_SIZE
+        int "TX buffer size"
+        default 1024
+
+    config VREG_QUEUE_SIZE
+        int "Queue size for the UART"
+        default 5
+
+    menu "Voltage Regulator Task"
+        depends on VREG_ENABLED
+
+        config VREG_TASK_PRIO
+            int "Task priority"
+            default 4
+
+        config VREG_TASK_STACK_DEPTH
+            int "Stack depth in WORDS"
+            default 4000
+
+    endmenu
+endmenu

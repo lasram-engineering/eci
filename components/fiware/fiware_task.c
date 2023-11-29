@@ -43,8 +43,6 @@ static const char *KW_REMOTE_COMMAND = "execute";
 
 static FiwareAccessToken_t fiware_access_token;
 
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
-
 #define FIWARE_IOT_COMMAND_PROGRAM_PARAMS 1
 
 #define FREE_CMD_PARAMS(param, param_num) \

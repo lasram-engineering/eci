@@ -12,6 +12,7 @@
 #include "uart_task.h"
 #include "fiware_task.h"
 #include "stepper.h"
+#include "vreg.h"
 
 static httpd_handle_t server = NULL;
 
@@ -42,6 +43,10 @@ void app_main(void)
 
 #ifdef CONFIG_STEPPER_MOTOR_ENABLED
     ESP_ERROR_CHECK(stepper_start_task());
+#endif
+
+#ifdef CONFIG_VREG_ENABLED
+    ESP_ERROR_CHECK(vreg_start_task());
 #endif
 
 #ifdef CONFIG_FIWARE_TASK_ENABLE
