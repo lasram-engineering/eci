@@ -1,0 +1,20 @@
+menu "pH Measurement"
+    config PH_ENABLED
+        bool "Enable pH measurements"
+
+    config PH_ADC_CHANNEL
+        int "ADC channel used"
+        default 0
+        range 0 8
+
+    menu "pH Measurement Task"
+        depends on PH_ENABLED
+        config PH_TASK_STACK_DEPTH
+            int "Task stack depth"
+            default 4000
+
+        config PH_TASK_PRIO
+            int "Task priority"
+            default 4
+    endmenu
+endmenu

@@ -16,5 +16,3 @@
 esp_err_t uart_start_task();
 
 void uart_task(void *arg);
-
-esp_err_t process_incoming_messages();

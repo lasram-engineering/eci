@@ -1,4 +1,3 @@
-set(COMPONENT_REQUIRES "mau")
 set(COMPONENT_PRIV_REQUIRES "driver" "task_intercom" "fiware")
 
 if(CONFIG_UART_TASK_ENABLE)

@@ -1,0 +1,31 @@
+menu "Stepper Motor control"
+    config STEPPER_MOTOR_ENABLED
+        bool "Enable stepper motor control"
+
+    config STEPPER_STEP_PIN
+        depends on STEPPER_MOTOR_ENABLED
+        int "Stepper step pin number"
+        default 13
+
+    config STEPPER_EN_PIN
+        depends on STEPPER_MOTOR_ENABLED
+        int "Stepper motor enable pin number"
+        default 12
+
+    config STEPPER_DIR_PIN
+        depends on STEPPER_MOTOR_ENABLED
+        int "Stepper motor direction pin number"
+        default 14
+
+    menu "Stepper Motor control task"
+        depends on STEPPER_MOTOR_ENABLED
+
+        config STEPPER_TASK_STACK_DEPTH
+            int "Task stack depth in WORDS"
+            default 4000
+
+        config STEPPER_TASK_PRIO
+            int "Task priority"
+            default 4
+    endmenu
+endmenu
