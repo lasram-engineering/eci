@@ -1,3 +1,4 @@
+/// @file
 #include "task_intercom.h"
 
 #include <string.h>
@@ -76,6 +77,16 @@ void task_intercom_message_init(itc_message_t *message)
     message->is_measurement = false;
 }
 
+/**
+ * @brief Appends a token to the tokens in the ITC message
+ *
+ * @details the token pointer is appended to the array of char pointers
+ *  if needed the array is resized to fit the token
+ *
+ * @param message pointer to the message
+ * @param token pointer to the start of the token
+ * @return esp_err_t ESP_OK if the operation was successful, else ESP_ERR_NO_MEM
+ */
 esp_err_t task_itc_message_add_token(itc_message_t *message, char *token)
 {
     if (message->token_num == 0)
@@ -97,6 +108,16 @@ esp_err_t task_itc_message_add_token(itc_message_t *message, char *token)
     return ESP_OK;
 }
 
+/**
+ * @brief Cheks if the given character string is equal to the token at the given index
+ *
+ * @param message pointer to the ITC message struct
+ * @param token_num number of the queried token in the message
+ * @param match char array of the string to check for a match
+ * @return esp_err_t    ESP_OK if there is a match,
+ *                      ESP_FAIL if there is no match,
+ *                      ESP_ERR_INVALID_ARG if the token_num is greater than the number of tokens in the message
+ */
 esp_err_t task_itc_message_token_match(itc_message_t *message, int token_num, const char *match)
 {
     if (token_num >= message->token_num)

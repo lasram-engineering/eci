@@ -5,12 +5,21 @@
 #include <esp_err.h>
 #include <esp_timer.h>
 
+/// @brief Stepper motor handle
 typedef struct
 {
+    /// @brief enable pin number
     uint8_t pin_en;
+    /// @brief step pin number
     uint8_t pin_step;
+    /// @brief direction pin number
     uint8_t pin_dir;
+    /// @brief true if the motor is running, false otherwise
     bool is_on;
+    /**
+     * @brief boolean flag to keep track of the output pin state
+     * @internal
+     */
     bool step;
     /// @brief current speed in steps per second
     uint32_t speed;

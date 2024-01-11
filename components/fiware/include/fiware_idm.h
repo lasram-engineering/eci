@@ -13,13 +13,22 @@
 #define FIWARE_AUTH_BASE64_ENCODED_LEN 100 // 36 byte id + ':' + 36 byte secret
 #define FIWARE_AUTH_BUF_LEN FIWARE_AUTH_HEADER_BASIC_LEN + FIWARE_AUTH_BASE64_ENCODED_LEN
 
+/**
+ * @brief FIWARE access token used to access and modify data in the context broker
+ */
 typedef struct
 {
+    /// @brief Char array of the access token
     char token[FIWARE_IDM_ACCESS_TOKEN_LEN + 1];
+    /// @brief Char array of the refresh token
     char refresh_token[FIWARE_IDM_ACCESS_TOKEN_LEN + 1];
+    /// @brief time in seconds after which the token will expire
     time_t expires_in;
 } FiwareAccessToken_t;
 
+/**
+ * @brief Enum to store the grant types
+ */
 typedef enum
 {
     PASSWORD,

@@ -1,3 +1,4 @@
+/// @file
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -20,6 +21,18 @@ static const char *TAG = "Main";
 
 static httpd_handle_t server = NULL;
 
+/**
+ * @brief Main entrypoint of the application
+ *
+ * @details The app initializes the Non-volatile storage (NVS).
+ *  Then it sets up the ntp time sync.
+ *  WiFi and inter-task communication is initialized.
+ *  The following tasks are spawned: UART, Stepper, Voltage regulator, pH measurement, FIWARE
+ *  After these tasks are successfully started, the http server is started
+ *
+ *  @see Task functions: uart_start_task(), stepper_start_task(), vreg_start_task(), ph_start_task(), fiware_start_task()
+ *  @see Other initializing functions: wifi_connect_to_station(), task_intercom_init(), start_http_server()
+ */
 void app_main(void)
 {
     // Initialize NVS

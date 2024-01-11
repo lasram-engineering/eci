@@ -1,3 +1,4 @@
+/// @file
 #include "uart_task.h"
 
 #include <string.h>
@@ -23,6 +24,13 @@ static const char *TAG = "UART";
 
 static TaskHandle_t uart_task_handle = NULL;
 
+/**
+ * @brief Starts the UART communication task
+ *
+ * @details the task code is found in the function uart_task()
+ *
+ * @return esp_err_t ESP_OK if the task was started, ESP_ERR_NO_MEM if the task could not be started
+ */
 esp_err_t uart_start_task()
 {
     if (uart_task_handle != NULL)
@@ -57,6 +65,16 @@ QueueHandle_t uart_queue_robot;
 /**
  * @brief Processes incoming messages from the UART queue
  *
+ * @details the function receives an ITC message from the incoming queue (timeout is zero).
+ *  The incoming command is then sent to the controller via the kawasaki_make_response() method.
+ *  If CONFIG_IOT_AGENT_REMOTE_COMMANDS is defined and the message id is IOT_AGENT_REMOTE_COMMAND_ID
+ *  then the payload of the message is treated as an incoming command from the controller
+ *
+ * @param payload char array of the raw incoming payload
+ *
+ * @returns esp_err_t   ESP_OK if the message was processed
+ *                      ESP_ERR_NOT_FOUND if there is no incoming message
+ *                      ESP_ERR_INVALID_ARG if the intercom message is empty
  */
 esp_err_t process_incoming_messages(char **payload)
 {

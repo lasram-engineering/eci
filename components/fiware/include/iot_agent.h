@@ -9,9 +9,14 @@
 #define IOT_AGENT_REMOTE_COMMAND_ID 0xFFFFFFFF
 #endif
 
+/**
+ * @brief Struct containing the incoming IoT Agent command
+ */
 typedef struct
 {
+    /// @brief Name of the command
     char *command_name;
+    /// @brief The payload of the command
     char *payload;
 } fiware_iota_command_t;
 

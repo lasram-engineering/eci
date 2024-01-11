@@ -1,3 +1,4 @@
+/// @file
 #include "fiware_task.h"
 
 #include <string.h>
@@ -22,6 +23,13 @@ static const char *TAG = "FIWARE Task";
 
 static TaskHandle_t fiware_task_handle = NULL;
 
+/**
+ * @brief Starts the FIWARE task that is responsible for communicating with the IoT Agent
+ *
+ * @details the function launches the task code found in fiware_task()
+ *
+ * @return esp_err_t ESP_OK if the task was started, ESP_ERR_NO_MEM if the task could not be started
+ */
 esp_err_t fiware_start_task()
 {
     if (fiware_task_handle != NULL)
@@ -38,9 +46,15 @@ esp_err_t fiware_start_task()
     return ret == pdPASS ? ESP_OK : ESP_ERR_NO_MEM;
 }
 
+/// @brief Name of the IoT Command to inform the controller there is a new program
 static const char *KW_PROGRAM_UPDATE = "update_program";
-static const char *KW_REMOTE_COMMAND = "execute";
 
+#ifdef CONFIG_IOT_AGENT_REMOTE_COMMANDS
+/// @brief Name of the IoT Command to execute a remote command
+static const char *KW_REMOTE_COMMAND = "execute";
+#endif
+
+/// @brief The access token to FIWARE
 static FiwareAccessToken_t fiware_access_token;
 
 #define FIWARE_IOT_COMMAND_PROGRAM_PARAMS 1
@@ -55,6 +69,13 @@ static FiwareAccessToken_t fiware_access_token;
         free(param);                      \
     }
 
+/**
+ * @brief Process the incoming command
+ *
+ * @param command itc_message_t InterTask Communication message; the message to be processed
+ * @return esp_err_t    ESP_OK if the command was processed successfully
+ *                      ESP_FAIL if there was an error
+ */
 esp_err_t fiware_process_command(const itc_message_t *command)
 {
     esp_err_t ret = ESP_OK;
@@ -143,6 +164,17 @@ cleanup:
     return ret;
 }
 
+/**
+ * @brief Task code of the FIWARE task
+ *
+ * @details the task is suspended until WiFi connection is established and sntp network sync is achieved.
+ *  Then the task requests a FIWARE access token into the @link fiware_access_token variable @endlink.
+ *  After this the main task loop begins.
+ *  The task is suspended until there are incoming IoT measurements in the queue.
+ *  If there is a timeout waiting for the measurement, the process tries to get an IoT command from the queue.
+ *  If there is an incoming measurement it is processed via the fiware_iota_make_measurement() method.
+ *  If there is an incoming command it is processed via the fiware_process_command() method.
+ */
 void fiware_task()
 {
     int ret;

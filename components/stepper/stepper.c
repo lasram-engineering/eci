@@ -1,3 +1,4 @@
+/// @file
 #include "stepper.h"
 
 #include <string.h>
@@ -22,6 +23,11 @@ static const char *KW_SPEED = "SPEED";
 
 static TaskHandle_t stepper_task_handle = NULL;
 
+/**
+ * @brief Callback function that gets called when a stepper motor step is due
+ *
+ * @param param void* pointer to a stepper_t struct used to control the motor
+ */
 void timer_callback(void *param)
 {
     stepper_t *stepper = (stepper_t *)param;
@@ -30,6 +36,10 @@ void timer_callback(void *param)
     gpio_set_level(stepper->pin_step, stepper->step);
 }
 
+/**
+ * @brief Task code of the stepper task
+ *
+ */
 void stepper_task()
 {
     stepper_t stepper;
@@ -113,6 +123,16 @@ void stepper_task()
     }
 }
 
+/**
+ * @brief This method is used to initialize the communication with a stepper motor controller
+ *
+ * @param step number of the step pin
+ * @param dir number of the direction pin
+ * @param en number of the enable pin
+ * @param timer timer object used to time the step intervals
+ * @param stepper pointer to a stepper_t struct to store the object
+ * @return esp_err_t ESP_OK if the operation succeeded, error code if there was a gpio configuration error
+ */
 esp_err_t stepper_init_stepper(uint8_t step, uint8_t dir, uint8_t en, esp_timer_handle_t timer, stepper_t *stepper)
 {
     // configure the GPIO ports
@@ -139,6 +159,16 @@ esp_err_t stepper_init_stepper(uint8_t step, uint8_t dir, uint8_t en, esp_timer_
     return ESP_OK;
 }
 
+/**
+ * @brief Sets the maximum speed of the stepper
+ *
+ * @note there are currently no acceleration and deceleration implemented,
+ *  meaning the max speed is equal to the speed of the motor
+ *
+ * @param stepper stepper_t handle
+ * @param max_speed the maximum speed in steps/second
+ * @return esp_err_t ESP_OK
+ */
 esp_err_t stepper_set_max_speed(stepper_t *stepper, uint32_t max_speed)
 {
     stepper->max_speed = max_speed;
@@ -146,6 +176,15 @@ esp_err_t stepper_set_max_speed(stepper_t *stepper, uint32_t max_speed)
     return ESP_OK;
 }
 
+/**
+ * @brief Turns on the stepper motor
+ *
+ * @param stepper stepper_t handle
+ * @param on true to turn, false to turn off the motor
+ * @return esp_err_t    ESP_OK if successful,
+ *                      ESP_ERR_INVALID_STATE if the motor is already turned off,
+ *                      ESP_ERR_INVALID_ARG if the motor speed is set to zero
+ */
 esp_err_t stepper_turn_on(stepper_t *stepper, bool on)
 {
     int ret;
@@ -195,6 +234,13 @@ esp_err_t stepper_turn_on(stepper_t *stepper, bool on)
     return ret;
 }
 
+/**
+ * @brief Starts the stepper task task
+ *
+ * @see task code stepper_task()
+ *
+ * @return esp_err_t ESP_OK if successful, ESP_ERR_NO_MEM if the task could not be started
+ */
 esp_err_t stepper_start_task()
 {
     if (stepper_task_handle != NULL)

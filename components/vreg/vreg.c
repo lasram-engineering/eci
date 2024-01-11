@@ -1,3 +1,4 @@
+/// @file
 #include "vreg.h"
 
 #include <string.h>
@@ -23,6 +24,16 @@ static TaskHandle_t vreg_task_handle = NULL;
 
 static QueueHandle_t vreg_uart_queue;
 
+/**
+ * @brief Sets the voltage to the given value on the regulator in millivolts
+ *
+ * @param uart_num the uart interface number to use
+ * @param mvolts the voltage in mvolts to be set
+ * @return esp_err_t
+ *  ESP_ERR_NO_MEM if there was not enough memory for the operation
+ *  ESP_ERR_TIMEOUT if there was a communication timeout
+ *  ESP_OK if the operation was successful
+ */
 esp_err_t vreg_set_voltage(uart_port_t uart_num, uint32_t mvolts)
 {
     char *vreg_message;
@@ -47,6 +58,13 @@ esp_err_t vreg_set_voltage(uart_port_t uart_num, uint32_t mvolts)
     return ESP_OK;
 }
 
+/**
+ * @brief Voltage regulator task code
+ *
+ * @details The UART interface is initialized and the main loop is entered.
+ *  The task checks the queue for an ITC message and if it is matching then removes it from the queue.
+ *  Then the voltage is set accordingly.
+ */
 void vreg_task()
 {
     // setup the uart interface
@@ -123,6 +141,13 @@ void vreg_task()
     }
 }
 
+/**
+ * @brief Starts the voltage regulator task
+ *
+ * @see vreg_task() for the task code
+ *
+ * @return esp_err_t ESP_OK if the task was started, ESP_ERR_NO_MEM if the task could not be started
+ */
 esp_err_t vreg_start_task()
 {
     if (vreg_task_handle != NULL)

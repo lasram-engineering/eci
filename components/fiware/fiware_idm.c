@@ -1,3 +1,5 @@
+/// @file
+
 #include "fiware_idm.h"
 
 #include <esp_log.h>
@@ -17,6 +19,12 @@
 
 static const char *TAG = "FIWARE IdM";
 
+/**
+ * @brief Callback function to process the http client event
+ *
+ * @param event the event to be processed, its user data is the FiwareAccessToken_t that needs to be parsed
+ * @return esp_err_t ESP_OK
+ */
 esp_err_t idm_access_token_event_handler(esp_http_client_event_handle_t event)
 {
     switch (event->event_id)
@@ -91,6 +99,16 @@ static const esp_http_client_config_t request_access_token_config = {
     .cert_pem = NULL,
 };
 
+/**
+ * @brief Sends a request to the FIWARE KeyRock to generate an access token
+ *
+ * @param token pointer to a FiwareAccessToken_t struct to load the token into
+ * @param grant_type used to specify the grant type: either PASSWORD or REFRESH.
+ *                   Use PASSWORD to request the initial token and REFRESH to refresh an expired token
+ * @return esp_err_t    ESP_ERR_INVALID_ARG if the grant type was invalid,
+ *                      ESP_OK if the request was successful,
+ *                      ESP_FAIL if there was an error requesting the token
+ */
 esp_err_t fiware_idm_request_access_token_grant_type(FiwareAccessToken_t *token, FiwareAccessTokenGrantType grant_type)
 {
     esp_http_client_handle_t client = esp_http_client_init(&request_access_token_config);
@@ -153,6 +171,12 @@ esp_err_t fiware_idm_request_access_token_grant_type(FiwareAccessToken_t *token,
     return ESP_FAIL;
 }
 
+/**
+ * @brief Requests a new FIWARE access token
+ *
+ * @param token pointer to the FiwareAccessToken_t struct to load the token into
+ * @return esp_err_t see fiware_idm_request_access_token_grant_type()
+ */
 esp_err_t fiware_idm_request_access_token(FiwareAccessToken_t *token)
 {
     // check if wifi is not connected
@@ -161,6 +185,12 @@ esp_err_t fiware_idm_request_access_token(FiwareAccessToken_t *token)
     return fiware_idm_request_access_token_grant_type(token, PASSWORD);
 }
 
+/**
+ * @brief Request a FIWARE access token renewal
+ *
+ * @param token pointer to the FiwareAccessToken_t struct
+ * @return esp_err_t see fiware_idm_request_access_token_grant_type()
+ */
 esp_err_t fiware_idm_renew_access_token(FiwareAccessToken_t *token)
 {
     // check if wifi is not connected
@@ -169,6 +199,13 @@ esp_err_t fiware_idm_renew_access_token(FiwareAccessToken_t *token)
     return fiware_idm_request_access_token_grant_type(token, REFRESH);
 }
 
+/**
+ * @brief Attach the necessary authentication data to an http client request
+ *
+ * @param token FiwareAccessToken_t token to attack
+ * @param client esp http client handle
+ * @return esp_err_t ESP_OK
+ */
 esp_err_t fiware_idm_attach_auth_data_to_request(FiwareAccessToken_t *token, esp_http_client_handle_t client)
 {
     // set the X-Auth-Token header value to the tokens value
@@ -177,6 +214,13 @@ esp_err_t fiware_idm_attach_auth_data_to_request(FiwareAccessToken_t *token, esp
     return ESP_OK;
 }
 
+/**
+ * @brief Checks if the token is expired or not
+ *
+ * @param token FiwareAccessToken_t the token to check
+ * @return true if the token is expired (not valid)
+ * @return false if the token is valid
+ */
 bool fiware_idm_check_is_token_expired(FiwareAccessToken_t *token)
 {
     time_t now;
