@@ -20,6 +20,7 @@ static TaskHandle_t wifi_task_handle = NULL;
 
 EventGroupHandle_t wifi_events = NULL;
 
+/// @brief Callback method for handling WiFi events
 static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t event_id, void *event_data)
 {
     static int retries = 0;
@@ -47,6 +48,7 @@ static void wifi_event_handler(void *arg, esp_event_base_t event_base, int32_t e
     }
 }
 
+/// @brief task code of the WiFi connection task
 void wifi_connect_to_station_task()
 {
     int ret = ESP_OK;
@@ -140,6 +142,8 @@ esp_err_t wifi_connect_to_station()
     return ret == pdPASS ? ESP_OK : ESP_FAIL;
 }
 
+/// @brief checks if the WiFi module is initialized
+/// @return true if the WiFi module has been initialized, false otherwise
 bool is_wifi_initialized()
 {
     if (wifi_events == NULL)
@@ -148,6 +152,8 @@ bool is_wifi_initialized()
     return xEventGroupGetBits(wifi_events) & WIFI_INITIALIZED;
 }
 
+/// @brief checks if the WiFi is connected
+/// @return true if the WiFi is connected, false otherwise
 bool is_wifi_connected()
 {
     if (wifi_events == NULL)
@@ -156,6 +162,9 @@ bool is_wifi_connected()
     return xEventGroupGetBits(wifi_events) & WIFI_CONNECTED;
 }
 
+/// @brief Blocks until the WiFi module is initialized
+/// @param ticks_to_wait TickType_t the number of ticks to wait before returning
+/// @return ESP_OK if the WiFi is initialized, ESP_ERR_TIMEOUT if a timeout has happened
 esp_err_t wifi_wait_initialized(TickType_t ticks_to_wait)
 {
     if (wifi_events == NULL)
@@ -166,6 +175,9 @@ esp_err_t wifi_wait_initialized(TickType_t ticks_to_wait)
     return bits & WIFI_INITIALIZED ? ESP_OK : ESP_ERR_TIMEOUT;
 }
 
+/// @brief Blocks until the WiFi is connected
+/// @param ticks_to_wait TickType_t number of ticks to wait before timing out
+/// @return ESP_OK if the WiFi is connected, ESP_ERR_TIMEOUT if a timeout has occurred
 esp_err_t wifi_wait_connected(TickType_t ticks_to_wait)
 {
     if (wifi_events == NULL)

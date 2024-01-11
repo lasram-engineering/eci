@@ -1,3 +1,4 @@
+/// @file
 #include "sensor.h"
 
 #include <esp_log.h>
@@ -18,6 +19,12 @@
 
 static const char *TAG = "pH Sensor";
 
+/**
+ * @brief Loads the sensor configuration data from the non-volatile storage (NVS)
+ *
+ * @param sensor ph_sensor_t handle to load the data into
+ * @return esp_err_t ESP_OK if successful, error code if there was an NVS flash error
+ */
 esp_err_t ph_sensor_load_from_nvs(ph_sensor_t *sensor)
 {
     nvs_handle_t nvs_handle;
@@ -58,6 +65,12 @@ cleanup:
     return ret;
 }
 
+/**
+ * @brief Stores the sensor configuration in the non-volatile storage (NVS)
+ *
+ * @param sensor ph_sensor_t handle to load the data from
+ * @return esp_err_t ESP_OK if successful, error code if there was an NVS flash error
+ */
 esp_err_t ph_sensor_store_in_nvs(ph_sensor_t *sensor)
 {
     nvs_handle_t nvs_handle;
@@ -74,22 +87,22 @@ esp_err_t ph_sensor_store_in_nvs(ph_sensor_t *sensor)
         nvs_set_u32(nvs_handle, PH_SENSOR_NVS_V_LOW_NAME, sensor->voltage_low),
         cleanup,
         TAG,
-        "Unable to get value: " PH_SENSOR_NVS_V_LOW_NAME);
+        "Unable to set value: " PH_SENSOR_NVS_V_LOW_NAME);
     ESP_GOTO_ON_ERROR(
         nvs_set_u32(nvs_handle, PH_SENSOR_NVS_V_HIGH_NAME, sensor->voltage_high),
         cleanup,
         TAG,
-        "Unable to get value: " PH_SENSOR_NVS_V_HIGH_NAME);
+        "Unable to set value: " PH_SENSOR_NVS_V_HIGH_NAME);
     ESP_GOTO_ON_ERROR(
         nvs_set_u32(nvs_handle, PH_SENSOR_NVS_PH_LOW_NAME, sensor->ph_low),
         cleanup,
         TAG,
-        "Unable to get value: " PH_SENSOR_NVS_PH_LOW_NAME);
+        "Unable to set value: " PH_SENSOR_NVS_PH_LOW_NAME);
     ESP_GOTO_ON_ERROR(
         nvs_set_u32(nvs_handle, PH_SENSOR_NVS_PH_HIGH_NAME, sensor->ph_high),
         cleanup,
         TAG,
-        "Unable to get value: " PH_SENSOR_NVS_PH_HIGH_NAME);
+        "Unable to set value: " PH_SENSOR_NVS_PH_HIGH_NAME);
 
 cleanup:
     if (ret == ESP_OK)
@@ -100,6 +113,12 @@ cleanup:
     return ret;
 }
 
+/**
+ * @brief Initializes the pH sensor trying to load the configuration from the NVS flash
+ *
+ * @param sensor ph_sensor_t handle to initialize
+ * @return esp_err_t ESP_OK if successful
+ */
 esp_err_t ph_sensor_init(ph_sensor_t *sensor)
 {
     int ret;
@@ -129,6 +148,13 @@ esp_err_t ph_sensor_init(ph_sensor_t *sensor)
     return ESP_OK;
 }
 
+/**
+ * @brief Measures the voltage from the pH sensor board
+ *
+ * @param sensor ph_sensor_t handle to the configured sensor
+ * @param voltage pointer to a sensor_unit_t variable to store the voltage value
+ * @return esp_err_t ESP_OK if successful, error code otherwise
+ */
 esp_err_t ph_sensor_measure_voltage(ph_sensor_t *sensor, sensor_unit_t *voltage)
 {
     // configure adc
@@ -198,6 +224,19 @@ esp_err_t ph_sensor_make_measurement(ph_sensor_t *sensor, sensor_unit_t *measure
     return ESP_OK;
 }
 
+/**
+ * @brief Calibrates the pH sensor
+ *
+ * @details the pH value is calculated by linear interpolation.
+ *  Use this method to set the high or the low voltage corresponding to a known pH value
+ *
+ * @param sensor ph_sensor_t handle to the sensor
+ * @param high_point true if calibrating high point, false if calibrating low point
+ * @param control_ph sensor_unit_t value of the known pH
+ * @return esp_err_t    ESP_ERR_INVALID_ARG if the pH value is outside of the range
+ *                      ESP_OK if successful
+ *                      error code, see ph_sensor_measure_voltage()
+ */
 esp_err_t ph_sensor_calibrate(ph_sensor_t *sensor, bool high_point, sensor_unit_t control_ph)
 {
     if (control_ph < 1000 || control_ph > 7000)

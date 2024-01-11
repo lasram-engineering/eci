@@ -21,6 +21,7 @@ static const char *KW_HIGH = "HIGH";
 
 static TaskHandle_t ph_task_handle = NULL;
 
+/// @brief Task code of the pH measurement task
 void ph_task()
 {
     int ret;
@@ -98,6 +99,13 @@ void ph_task()
     }
 }
 
+/**
+ * @brief Starts the pH measurement task
+ *
+ * @see task code ph_task()
+ *
+ * @return esp_err_t ESP_OK if successful, ESP_ERR_NO_MEM otherwise
+ */
 esp_err_t ph_start_task()
 {
     if (ph_task_handle != NULL)

@@ -1,3 +1,4 @@
+/// @file
 #include "server.h"
 
 #include <freertos/FreeRTOS.h>
@@ -124,6 +125,11 @@ httpd_uri_t uri_api_post = {
     .user_ctx = NULL,
 };
 
+/**
+ * @brief Starts the http server
+ *
+ * @return httpd_handle_t pointer to the server handle or NULL if the server could not be started
+ */
 httpd_handle_t start_http_server()
 {
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
@@ -147,6 +153,9 @@ httpd_handle_t start_http_server()
 
     return server;
 }
+
+/// @brief stops the running http server
+/// @param server handle to the server
 void stop_http_server(httpd_handle_t server)
 {
     if (server)
