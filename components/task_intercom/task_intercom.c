@@ -133,6 +133,8 @@ void task_intercom_message_delete(itc_message_t *message)
         free(message->response);
 
     free(message);
+
+    message = NULL;
 }
 
 /**

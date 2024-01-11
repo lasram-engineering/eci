@@ -10,8 +10,8 @@ typedef struct
     uint8_t pin_en;
     uint8_t pin_step;
     uint8_t pin_dir;
-    /// @brief the system time at which the last step was taken
-    uint64_t last_step;
+    bool is_on;
+    bool step;
     /// @brief current speed in steps per second
     uint32_t speed;
     /// @brief maximum allowed rotation speed in steps / second

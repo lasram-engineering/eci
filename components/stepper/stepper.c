@@ -25,9 +25,9 @@ static TaskHandle_t stepper_task_handle = NULL;
 void timer_callback(void *param)
 {
     stepper_t *stepper = (stepper_t *)param;
+    stepper->step = !stepper->step;
 
-    gpio_set_level(stepper->pin_step, 1);
-    gpio_set_level(stepper->pin_step, 0);
+    gpio_set_level(stepper->pin_step, stepper->step);
 }
 
 void stepper_task()
@@ -107,9 +107,6 @@ void stepper_task()
             int speed = atoi(message->tokens[2]);
 
             stepper_set_max_speed(&stepper, speed);
-
-            stepper_turn_on(&stepper, false); // turn off timer
-            stepper_turn_on(&stepper, true);  // turn on timer
         }
 
         xQueueSend(task_itc_to_uart_queue, &message, portMAX_DELAY);
@@ -133,7 +130,8 @@ esp_err_t stepper_init_stepper(uint8_t step, uint8_t dir, uint8_t en, esp_timer_
     stepper->pin_dir = dir;
     stepper->pin_en = en;
     stepper->pin_step = step;
-    stepper->last_step = 0;
+    stepper->is_on = false;
+    stepper->step = false;
     stepper->speed = 0;
     stepper->max_speed = 0;
     stepper->timer = timer;
@@ -150,18 +148,51 @@ esp_err_t stepper_set_max_speed(stepper_t *stepper, uint32_t max_speed)
 
 esp_err_t stepper_turn_on(stepper_t *stepper, bool on)
 {
-    if (!on)
-        return esp_timer_stop(stepper->timer);
+    int ret;
 
+    // turn off
+    if (!on)
+    {
+        // motor is on
+        if (stepper->is_on)
+        {
+            ret = esp_timer_stop(stepper->timer);
+
+            if (ret == ESP_OK)
+                stepper->is_on = false;
+
+            return ret;
+        }
+
+        // if motor is off, invalid state
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    // turn on
+
+    // check if motor speed is zero
     if (stepper->max_speed == 0)
     {
         ESP_LOGW(TAG, "Stepper motor speed is set to 0, cannot start");
         return ESP_ERR_INVALID_ARG;
     }
 
-    uint64_t period_us = 1000000 / stepper->max_speed;
+    // calculate period in microseconds
+    uint64_t period_us = 1000000 / 2 / stepper->max_speed;
 
-    return esp_timer_start_periodic(stepper->timer, period_us);
+    ESP_LOGI(TAG, "Stepper timer started with value: %llu (us)", period_us);
+
+    // stepper was already on, restart timer
+    if (stepper->is_on)
+        return esp_timer_restart(stepper->timer, period_us);
+
+    // stepper was off, start timer
+    ret = esp_timer_start_periodic(stepper->timer, period_us);
+
+    if (ret == ESP_OK)
+        stepper->is_on = true;
+
+    return ret;
 }
 
 esp_err_t stepper_start_task()

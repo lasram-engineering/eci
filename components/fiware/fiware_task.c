@@ -131,13 +131,13 @@ cleanup:
         FREE_CMD_PARAMS(params, param_num);
 
     // if the message is empty and allocated free it
-    if (task_intercom_message_is_empty(uart_message))
+    if (uart_message != NULL && !task_intercom_message_is_empty(uart_message))
     {
-        task_intercom_message_delete(uart_message);
+        xQueueSend(task_itc_to_uart_queue, &uart_message, portMAX_DELAY);
     }
     else
     {
-        xQueueSend(task_itc_to_uart_queue, &uart_message, portMAX_DELAY);
+        task_intercom_message_delete(uart_message);
     }
 
     return ret;

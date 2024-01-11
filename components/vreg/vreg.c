@@ -11,6 +11,8 @@
 
 #include "task_intercom.h"
 
+#define VREG_UART_TIMEOUT_MS 2000 // TODO move to Kconfig
+
 #define MIN(a, b) ((a) < (b)) ? (a) : (b)
 
 static const char *TAG = "Voltage Regulator";
@@ -21,7 +23,7 @@ static TaskHandle_t vreg_task_handle = NULL;
 
 static QueueHandle_t vreg_uart_queue;
 
-esp_err_t vreg_set_voltage(uart_port_t uart_num, uint16_t mvolts)
+esp_err_t vreg_set_voltage(uart_port_t uart_num, uint32_t mvolts)
 {
     char *vreg_message;
     int ret;
@@ -33,9 +35,14 @@ esp_err_t vreg_set_voltage(uart_port_t uart_num, uint16_t mvolts)
 
     uart_write_bytes(uart_num, vreg_message, strlen(vreg_message));
 
-    // TODO imlpement waiting for a response
-
     free(vreg_message);
+
+    ret = uart_wait_tx_done(uart_num, pdMS_TO_TICKS(VREG_UART_TIMEOUT_MS));
+
+    if (ret == ESP_ERR_TIMEOUT)
+        return ret;
+
+    // TODO imlpement waiting for a response
 
     return ESP_OK;
 }
@@ -100,7 +107,7 @@ void vreg_task()
             continue;
         }
 
-        uint16_t mvolts = atoi(message->tokens[1]);
+        uint32_t mvolts = atoi(message->tokens[1]);
 
         ESP_LOGI(TAG, "Setting voltage to %fV", (float)mvolts / 1000);
 

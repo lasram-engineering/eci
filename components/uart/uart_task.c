@@ -68,7 +68,14 @@ esp_err_t process_incoming_messages(char **payload)
     if (ret == pdFALSE)
         return ESP_ERR_NOT_FOUND;
 
+    if (task_intercom_message_is_empty(incoming_message))
+    {
+        task_intercom_message_delete(incoming_message);
+        return ESP_ERR_INVALID_ARG;
+    }
+
 #ifdef CONFIG_IOT_AGENT_REMOTE_COMMANDS
+
     if (incoming_message->message_id == IOT_AGENT_REMOTE_COMMAND_ID)
     {
         *payload = strdup(incoming_message->payload);
@@ -133,8 +140,8 @@ void uart_task(void *arg)
             uart_robot,
             CONFIG_UART_TX,
             CONFIG_UART_RX,
-            CONFIG_UART_RTS,
-            CONFIG_UART_CTS));
+            UART_PIN_NO_CHANGE,
+            UART_PIN_NO_CHANGE));
 
     // install driver
     ESP_ERROR_CHECK(
