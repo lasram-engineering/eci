@@ -5,7 +5,7 @@ menu "Stepper Motor control"
     config STEPPER_STEP_PIN
         depends on STEPPER_MOTOR_ENABLED
         int "Stepper step pin number"
-        default 13
+        default 14
 
     config STEPPER_EN_PIN
         depends on STEPPER_MOTOR_ENABLED
@@ -15,7 +15,7 @@ menu "Stepper Motor control"
     config STEPPER_DIR_PIN
         depends on STEPPER_MOTOR_ENABLED
         int "Stepper motor direction pin number"
-        default 14
+        default 13
 
     menu "Stepper Motor control task"
         depends on STEPPER_MOTOR_ENABLED

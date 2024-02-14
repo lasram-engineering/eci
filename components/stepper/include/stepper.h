@@ -23,6 +23,10 @@ typedef struct
     bool step;
     /// @brief current speed in steps per second
     uint32_t speed;
+    /// @brief number of steps to take
+    int32_t steps_to_make;
+    /// @brief steps remaining
+    int32_t steps_remaining;
     /// @brief maximum allowed rotation speed in steps / second
     uint32_t max_speed;
     /// @brief high precision hardware timer to control the motor
@@ -32,6 +36,8 @@ typedef struct
 esp_err_t stepper_init_stepper(uint8_t step, uint8_t dir, uint8_t en, esp_timer_handle_t timer, stepper_t *stepper);
 
 esp_err_t stepper_set_max_speed(stepper_t *stepper, uint32_t max_speed);
+
+esp_err_t stepper_set_steps(stepper_t *stepper, int32_t steps);
 
 esp_err_t stepper_turn_on(stepper_t *stepper, bool on);
 

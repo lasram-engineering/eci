@@ -20,6 +20,7 @@ static const char *KW_MOTOR = "MOTOR";
 static const char *KW_ON = "ON";
 static const char *KW_OFF = "OFF";
 static const char *KW_SPEED = "SPEED";
+static const char *KW_STEP = "STEP";
 
 static TaskHandle_t stepper_task_handle = NULL;
 
@@ -31,9 +32,22 @@ static TaskHandle_t stepper_task_handle = NULL;
 void timer_callback(void *param)
 {
     stepper_t *stepper = (stepper_t *)param;
-    stepper->step = !stepper->step;
 
+    // check remaining steps
+    if (stepper->steps_remaining == 0)
+    {
+        stepper_turn_on(stepper, false);
+        return;
+    }
+
+    // flip the step flag
+    stepper->step = !stepper->step;
+    // set the gpio level according to the step flag
     gpio_set_level(stepper->pin_step, stepper->step);
+
+    // decrement the steps if step counter is not disabled (negative)
+    if (stepper->steps_remaining > 0)
+        stepper->steps_remaining--;
 }
 
 /**
@@ -75,6 +89,7 @@ void stepper_task()
         // MOTOR | SPEED | 100
         // MOTOR |  ON
         // MOTOR |  OFF
+        // MOTOR | STEP  | 100
 
         // check if the message is for the stepper controller task
         if (message->token_num < 2)
@@ -114,9 +129,17 @@ void stepper_task()
         else if (task_itc_message_token_match(message, 1, KW_SPEED) == ESP_OK)
         {
             // parse the new speed
-            int speed = atoi(message->tokens[2]);
+            uint32_t speed = atoi(message->tokens[2]);
 
             stepper_set_max_speed(&stepper, speed);
+        }
+        //* MOTOR STEP
+        else if (task_itc_message_token_match(message, 1, KW_STEP) == ESP_OK)
+        {
+            // parse the number of steps
+            uint32_t steps = atoi(message->tokens[2]);
+
+            stepper_set_steps(&stepper, steps);
         }
 
         xQueueSend(task_itc_to_uart_queue, &message, portMAX_DELAY);
@@ -153,6 +176,7 @@ esp_err_t stepper_init_stepper(uint8_t step, uint8_t dir, uint8_t en, esp_timer_
     stepper->is_on = false;
     stepper->step = false;
     stepper->speed = 0;
+    stepper->steps_remaining = 0;
     stepper->max_speed = 0;
     stepper->timer = timer;
 
@@ -172,6 +196,13 @@ esp_err_t stepper_init_stepper(uint8_t step, uint8_t dir, uint8_t en, esp_timer_
 esp_err_t stepper_set_max_speed(stepper_t *stepper, uint32_t max_speed)
 {
     stepper->max_speed = max_speed;
+
+    return ESP_OK;
+}
+
+esp_err_t stepper_set_steps(stepper_t *stepper, int32_t steps)
+{
+    stepper->steps_to_make = steps;
 
     return ESP_OK;
 }
@@ -218,6 +249,9 @@ esp_err_t stepper_turn_on(stepper_t *stepper, bool on)
 
     // calculate period in microseconds
     uint64_t period_us = 1000000 / 2 / stepper->max_speed;
+
+    // set the remaining steps to the steps
+    stepper->steps_remaining = stepper->steps_to_make;
 
     ESP_LOGI(TAG, "Stepper timer started with value: %llu (us)", period_us);
 
